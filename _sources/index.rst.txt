@@ -10,10 +10,16 @@ Welcome to Sam G Notes's!
    :maxdepth: 2
    :caption: Contents:
 
+Quick Links
+-----------
 
+.. toctree::
+   :maxdepth: 2
+   
+   ./linux_gaming
 
 Indices and tables
-==================
+------------------
 
 * :ref:`genindex`
 * :ref:`modindex`
