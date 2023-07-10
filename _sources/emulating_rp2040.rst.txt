@@ -180,3 +180,5 @@ The __wrap_memset(void) function decompiles to this:
         (*(code *)0x534d)();
         return;
     }
+
+The emulator is unable to find valid instructions at address 0x534d and therefore throws an error. By looking at the RP2040 datasheet we can see that the first 16kB of memory, starting at address 0x00000000, is the ROM fixed at the time of silicon manufacture. Therefore, it would seem that the program is trying to execute some code baked into the ROM. 
