@@ -1,0 +1,63 @@
+Emulating the RP2040 with Ghidra
+================================
+
+Ghidra (an open-source SRE framework written by the NSA) provides a featureful emulator which works on all the achitectures Ghidra supports. These notes will show how to emulate a basic RP2040 ELF.
+
+Prerequisites
+-------------
+
+In order to follow these notes, both the latest version of Ghidra and the RP2040 SDK must be installed. Resources on how to do this can be found here:
+
+* `Install Ghidra <https://ghidra-sre.org/InstallationGuide.html>`
+* `Install RP2040 SDK <https://datasheets.raspberrypi.com/pico/getting-started-with-pico.pdf>`
+
+Building Hello World
+--------------------
+
+The first binary I attempted to emulate was a basic Hello World script consisting of the following main function:
+
+.. code-block:: C
+
+    #include <stdio.h>
+    #include "pico/stdlib.h"
+
+    int main() {
+        stdio_init_all();
+        while (1) {
+            printf("Hello, world!\n");
+            sleep_ms(1000);
+        }
+    }
+
+I configures the CMakeLists.txt file to output only on the USB interface using the following:
+
+.. code-block::
+    
+    cmake_minimum_required(VERSION 3.13)
+
+    include(pico_sdk_import.cmake)
+
+    project(hello_serial C CXX ASM)
+    set(CMAKE_C_STANDARD 11)
+    set(CMAKE_CXX_STANDARD 17)
+
+    pico_sdk_init()
+
+    if (TARGET tinyusb_device)
+        add_executable(pico_hello
+                hello_serial.c
+                )
+
+        # pull in common dependencies
+        target_link_libraries(pico_hello pico_stdlib)
+
+        # enable usb output, disable uart output
+        pico_enable_stdio_usb(pico_hello 1)
+        pico_enable_stdio_uart(pico_hello 0)
+
+        # create map/bin/hex/uf2 file etc.
+        pico_add_extra_outputs(pico_hello)
+
+    elseif(PICO_ON_DEVICE)
+        message(WARNING "not building hello_usb because TinyUSB submodule is not initialized in the SDK")
+    endif()

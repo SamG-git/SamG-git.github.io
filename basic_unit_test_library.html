@@ -1,0 +1,208 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>Basic Unit Test Library &#8212; Sam G Notes  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Emulating the RP2040 with Ghidra" href="emulating_rp2040.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="basic-unit-test-library">
+<h1>Basic Unit Test Library<a class="headerlink" href="#basic-unit-test-library" title="Permalink to this heading">¶</a></h1>
+<p>While unit tests provide greater assurance for developed software, setting up existing C unit test libraries can be tiresome. These notes will show how to create a basic unit test library using some simple regex and function pointers.</p>
+<section id="creating-the-unit-test-source">
+<h2>Creating the Unit Test Source<a class="headerlink" href="#creating-the-unit-test-source" title="Permalink to this heading">¶</a></h2>
+<p>The first step is to create a C source file containing the unit tests. This should import the header for the code you want to test. Each test function should start with the word “test”, return 0 on success, and return -1 on failure. The code below shows an example for testing a function which always returns zero. This will then need to be compiled into an object file.</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdlib.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdint.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;uut.h&quot;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">test_1</span><span class="p">(){</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">return_zero</span><span class="p">();</span>
+<span class="w">    </span><span class="k">if</span><span class="p">(</span><span class="n">output</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">){</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="mi">-1</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="creating-the-unit-test-add-executable">
+<h2>Creating the Unit Test add_executable<a class="headerlink" href="#creating-the-unit-test-add-executable" title="Permalink to this heading">¶</a></h2>
+<p>There is a good chance you will have a lot of unit test functions - this bash script will create a C source file which calls them all in sequence using an array of function pointers.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="ch">#!/bin/bash</span>
+
+<span class="c1"># Assume $1 is a .o object file</span>
+<span class="c1"># Assume $2 is the include file</span>
+
+<span class="nv">output</span><span class="o">=</span><span class="k">$(</span>nm<span class="w"> </span>-g<span class="w"> </span><span class="nv">$1</span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s2">&quot;test_&quot;</span><span class="k">)</span>
+
+<span class="nv">SAVEIFS</span><span class="o">=</span><span class="nv">$IFS</span>
+<span class="nv">IFS</span><span class="o">=</span><span class="s1">$&#39;\n&#39;</span>
+<span class="nv">output</span><span class="o">=(</span><span class="nv">$output</span><span class="o">)</span>
+<span class="nv">IFS</span><span class="o">=</span><span class="nv">$SAVEIFS</span>
+
+cat<span class="w"> </span>&gt;<span class="w"> </span>test.c<span class="w"> </span><span class="s">&lt;&lt;EOF</span>
+<span class="s">#include &lt;stdlib.h&gt;</span>
+<span class="s">#include &lt;stdio.h&gt;</span>
+<span class="s">#include &lt;stdint.h&gt;</span>
+
+<span class="s">#include &quot;$2&quot;</span>
+<span class="s">EOF</span>
+
+<span class="k">for</span><span class="w"> </span>i<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">output</span><span class="p">[@]</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="k">do</span>
+<span class="w">    </span><span class="nv">len</span><span class="o">=</span><span class="sb">`</span>expr<span class="w"> </span>length<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$i</span><span class="s2">&quot;</span><span class="sb">`</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;int </span><span class="si">${</span><span class="nv">i</span><span class="p">:</span><span class="nv">19</span><span class="p">:</span><span class="nv">$len</span><span class="p">-19</span><span class="si">}</span><span class="s2">();&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>test.c
+<span class="k">done</span>
+
+cat<span class="w"> </span>&gt;&gt;<span class="w"> </span>test.c<span class="w"> </span><span class="s">&lt;&lt;EOF</span>
+
+<span class="s">int main(){</span>
+<span class="s">    int (*tests[])() = {</span>
+<span class="s">EOF</span>
+
+<span class="k">for</span><span class="w"> </span>i<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">output</span><span class="p">[@]</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="k">do</span>
+<span class="w">    </span><span class="nv">len</span><span class="o">=</span><span class="sb">`</span>expr<span class="w"> </span>length<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$i</span><span class="s2">&quot;</span><span class="sb">`</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;      &amp;</span><span class="si">${</span><span class="nv">i</span><span class="p">:</span><span class="nv">19</span><span class="p">:</span><span class="nv">$len</span><span class="p">-19</span><span class="si">}</span><span class="s2">,&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>test.c
+<span class="k">done</span>
+
+cat<span class="w"> </span>&gt;&gt;<span class="w"> </span>test.c<span class="w"> </span><span class="s">&lt;&lt;EOF</span>
+<span class="s">    };</span>
+<span class="s">    for(int i = 0; i &lt; 62; i++){</span>
+<span class="s">            int result = (*tests[i])();</span>
+<span class="s">            if(result == 0){</span>
+<span class="s">                printf(&quot;PASS\n&quot;);</span>
+<span class="s">            } else {</span>
+<span class="s">                printf(&quot;FAIL\n&quot;);</span>
+<span class="s">            }</span>
+<span class="s">        }</span>
+
+<span class="s">    return 0;</span>
+<span class="s">}</span>
+<span class="s">EOF</span>
+</pre></div>
+</div>
+</section>
+<section id="writing-a-makefile">
+<h2>Writing a Makefile<a class="headerlink" href="#writing-a-makefile" title="Permalink to this heading">¶</a></h2>
+<p>All these steps can be combined with the help of a Makefile, such as the one below.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>uut.o:
+    $(CC) -Wall -c uut.c -o uut.o
+
+unit_tests.o:
+    $(CC) -Wall -c unit_tests.c -o unit_tests.o
+
+test:
+    bash create_tests.sh unit_tests.o uut.h
+    $(CC) -Wall -c test.c -o test.o
+    $(CC) -Wall test.o uut.o unit_tests.o -o test
+    ./test
+</pre></div>
+</div>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Sam G Notes</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="linux_gaming.html">Linux Gaming</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="embedded_notes.html">Linux Gaming</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="emulating_rp2040.html">Emulating the RP2040 with Ghidra</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Basic Unit Test Library</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="embedded_notes.html">Linux Gaming</a><ul>
+      <li>Previous: <a href="emulating_rp2040.html" title="previous chapter">Emulating the RP2040 with Ghidra</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2023, Sam G.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 6.1.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="_sources/basic_unit_test_library.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

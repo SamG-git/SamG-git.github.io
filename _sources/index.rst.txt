@@ -17,6 +17,7 @@ Quick Links
    :maxdepth: 2
    
    ./linux_gaming
+   ./embedded_notes
 
 Indices and tables
 ------------------
