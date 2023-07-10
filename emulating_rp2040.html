@@ -15,7 +15,7 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Basic Unit Test Library" href="basic_unit_test_library.html" />
-    <link rel="prev" title="Linux Gaming" href="embedded_notes.html" />
+    <link rel="prev" title="Embedded Notes" href="embedded_notes.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -51,7 +51,7 @@
 
 <span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="n">stdio_init_all</span><span class="p">();</span>
-<span class="w">    </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Hello, world!</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
 <span class="w">        </span><span class="n">sleep_ms</span><span class="p">(</span><span class="mi">1000</span><span class="p">);</span>
 <span class="w">    </span><span class="p">}</span>
@@ -59,34 +59,145 @@
 </pre></div>
 </div>
 <p>I configures the CMakeLists.txt file to output only on the USB interface using the following:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">cmake_minimum_required</span><span class="p">(</span><span class="n">VERSION</span> <span class="mf">3.13</span><span class="p">)</span>
+<div class="highlight-cmake notranslate"><div class="highlight"><pre><span></span><span class="nb">cmake_minimum_required</span><span class="p">(</span><span class="s">VERSION</span><span class="w"> </span><span class="s">3.13</span><span class="p">)</span>
 
-<span class="n">include</span><span class="p">(</span><span class="n">pico_sdk_import</span><span class="o">.</span><span class="n">cmake</span><span class="p">)</span>
+<span class="nb">include</span><span class="p">(</span><span class="s">pico_sdk_import.cmake</span><span class="p">)</span>
 
-<span class="n">project</span><span class="p">(</span><span class="n">hello_serial</span> <span class="n">C</span> <span class="n">CXX</span> <span class="n">ASM</span><span class="p">)</span>
-<span class="nb">set</span><span class="p">(</span><span class="n">CMAKE_C_STANDARD</span> <span class="mi">11</span><span class="p">)</span>
-<span class="nb">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD</span> <span class="mi">17</span><span class="p">)</span>
+<span class="nb">project</span><span class="p">(</span><span class="s">hello_serial</span><span class="w"> </span><span class="s">C</span><span class="w"> </span><span class="s">CXX</span><span class="w"> </span><span class="s">ASM</span><span class="p">)</span>
+<span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_C_STANDARD</span><span class="w"> </span><span class="s">11</span><span class="p">)</span>
+<span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_CXX_STANDARD</span><span class="w"> </span><span class="s">17</span><span class="p">)</span>
 
-<span class="n">pico_sdk_init</span><span class="p">()</span>
+<span class="nb">pico_sdk_init</span><span class="p">()</span>
 
-<span class="k">if</span> <span class="p">(</span><span class="n">TARGET</span> <span class="n">tinyusb_device</span><span class="p">)</span>
-    <span class="n">add_executable</span><span class="p">(</span><span class="n">pico_hello</span>
-            <span class="n">hello_serial</span><span class="o">.</span><span class="n">c</span>
-            <span class="p">)</span>
+<span class="nb">if</span><span class="w"> </span><span class="p">(</span><span class="s">TARGET</span><span class="w"> </span><span class="s">tinyusb_device</span><span class="p">)</span>
+<span class="w">    </span><span class="nb">add_executable</span><span class="p">(</span><span class="s">pico_hello</span>
+<span class="w">            </span><span class="s">hello_serial.c</span>
+<span class="w">            </span><span class="p">)</span>
 
-    <span class="c1"># pull in common dependencies</span>
-    <span class="n">target_link_libraries</span><span class="p">(</span><span class="n">pico_hello</span> <span class="n">pico_stdlib</span><span class="p">)</span>
+<span class="w">    </span><span class="c"># pull in common dependencies</span>
+<span class="w">    </span><span class="nb">target_link_libraries</span><span class="p">(</span><span class="s">pico_hello</span><span class="w"> </span><span class="s">pico_stdlib</span><span class="p">)</span>
 
-    <span class="c1"># enable usb output, disable uart output</span>
-    <span class="n">pico_enable_stdio_usb</span><span class="p">(</span><span class="n">pico_hello</span> <span class="mi">1</span><span class="p">)</span>
-    <span class="n">pico_enable_stdio_uart</span><span class="p">(</span><span class="n">pico_hello</span> <span class="mi">0</span><span class="p">)</span>
+<span class="w">    </span><span class="c"># enable usb output, disable uart output</span>
+<span class="w">    </span><span class="nb">pico_enable_stdio_usb</span><span class="p">(</span><span class="s">pico_hello</span><span class="w"> </span><span class="s">1</span><span class="p">)</span>
+<span class="w">    </span><span class="nb">pico_enable_stdio_uart</span><span class="p">(</span><span class="s">pico_hello</span><span class="w"> </span><span class="s">0</span><span class="p">)</span>
 
-    <span class="c1"># create map/bin/hex/uf2 file etc.</span>
-    <span class="n">pico_add_extra_outputs</span><span class="p">(</span><span class="n">pico_hello</span><span class="p">)</span>
+<span class="w">    </span><span class="c"># create map/bin/hex/uf2 file etc.</span>
+<span class="w">    </span><span class="nb">pico_add_extra_outputs</span><span class="p">(</span><span class="s">pico_hello</span><span class="p">)</span>
 
-<span class="n">elseif</span><span class="p">(</span><span class="n">PICO_ON_DEVICE</span><span class="p">)</span>
-    <span class="n">message</span><span class="p">(</span><span class="n">WARNING</span> <span class="s2">&quot;not building hello_usb because TinyUSB submodule is not initialized in the SDK&quot;</span><span class="p">)</span>
-<span class="n">endif</span><span class="p">()</span>
+<span class="nb">elseif</span><span class="p">(</span><span class="s">PICO_ON_DEVICE</span><span class="p">)</span>
+<span class="w">    </span><span class="nb">message</span><span class="p">(</span><span class="s">WARNING</span><span class="w"> </span><span class="s2">&quot;not building hello_usb because TinyUSB submodule is not initialized in the SDK&quot;</span><span class="p">)</span>
+<span class="nb">endif</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="attempting-to-emulate-main">
+<h2>Attempting to Emulate Main<a class="headerlink" href="#attempting-to-emulate-main" title="Permalink to this heading">¶</a></h2>
+<p>Once the code had been compiled, I started a new Ghidra project and imported the ELF file. I then ran Ghidra’s automated analysis tools and had a quick look through the decompiled code.</p>
+<p>Initially, I attempted to emulate main by running the following Ghidra script:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ghidra.app.emulator</span> <span class="kn">import</span> <span class="n">EmulatorHelper</span>
+<span class="kn">from</span> <span class="nn">ghidra.program.model.symbol</span> <span class="kn">import</span> <span class="n">SymbolUtilities</span>
+
+
+<span class="k">def</span> <span class="nf">getAddress</span><span class="p">(</span><span class="n">offset</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">currentProgram</span><span class="o">.</span><span class="n">getAddressFactory</span><span class="p">()</span><span class="o">.</span><span class="n">getDefaultAddressSpace</span><span class="p">()</span><span class="o">.</span><span class="n">getAddress</span><span class="p">(</span><span class="n">offset</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">getSymbolAddress</span><span class="p">(</span><span class="n">symbolName</span><span class="p">):</span>
+    <span class="n">symbol</span> <span class="o">=</span> <span class="n">SymbolUtilities</span><span class="o">.</span><span class="n">getLabelOrFunctionSymbol</span><span class="p">(</span><span class="n">currentProgram</span><span class="p">,</span> <span class="n">symbolName</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">symbol</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">symbol</span><span class="o">.</span><span class="n">getAddress</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span><span class="p">(</span><span class="s2">&quot;Failed to locate label: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">symbolName</span><span class="p">))</span>
+
+<span class="k">def</span> <span class="nf">getProgramRegisterList</span><span class="p">(</span><span class="n">currentProgram</span><span class="p">):</span>
+    <span class="n">pc</span> <span class="o">=</span> <span class="n">currentProgram</span><span class="o">.</span><span class="n">getProgramContext</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">pc</span><span class="o">.</span><span class="n">registers</span>
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+    <span class="n">CONTROLLED_RETURN_OFFSET</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="n">mainFunctionEntry</span> <span class="o">=</span> <span class="n">getSymbolAddress</span><span class="p">(</span><span class="s2">&quot;main&quot;</span><span class="p">)</span>
+    <span class="n">emuHelper</span> <span class="o">=</span> <span class="n">EmulatorHelper</span><span class="p">(</span><span class="n">currentProgram</span><span class="p">)</span>
+    <span class="n">controlledReturnAddr</span> <span class="o">=</span> <span class="n">getAddress</span><span class="p">(</span><span class="n">CONTROLLED_RETURN_OFFSET</span><span class="p">)</span>
+
+    <span class="c1"># Tell emulator to run the main() function</span>
+    <span class="n">mainFunctionEntryLong</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="s2">&quot;0x</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mainFunctionEntry</span><span class="p">),</span> <span class="mi">16</span><span class="p">)</span>
+    <span class="n">emuHelper</span><span class="o">.</span><span class="n">writeRegister</span><span class="p">(</span><span class="n">emuHelper</span><span class="o">.</span><span class="n">getPCRegister</span><span class="p">(),</span> <span class="n">mainFunctionEntryLong</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Emulation starting at 0x</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mainFunctionEntry</span><span class="p">))</span>
+    <span class="k">while</span> <span class="n">monitor</span><span class="o">.</span><span class="n">isCancelled</span><span class="p">()</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+
+        <span class="n">executionAddress</span> <span class="o">=</span> <span class="n">emuHelper</span><span class="o">.</span><span class="n">getExecutionAddress</span><span class="p">()</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">executionAddress</span> <span class="o">==</span> <span class="n">controlledReturnAddr</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Emulation complete.&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Address: 0x</span><span class="si">{}</span><span class="s2"> (</span><span class="si">{}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">executionAddress</span><span class="p">,</span> <span class="n">getInstructionAt</span><span class="p">(</span><span class="n">executionAddress</span><span class="p">)))</span>
+
+        <span class="c1"># single step emulation</span>
+        <span class="n">success</span> <span class="o">=</span> <span class="n">emuHelper</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">monitor</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">success</span> <span class="o">==</span> <span class="kc">False</span><span class="p">):</span>
+            <span class="n">lastError</span> <span class="o">=</span> <span class="n">emuHelper</span><span class="o">.</span><span class="n">getLastError</span><span class="p">()</span>
+            <span class="n">printerr</span><span class="p">(</span><span class="s2">&quot;Emulation Error: &#39;</span><span class="si">{}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">lastError</span><span class="p">))</span>
+            <span class="k">return</span>
+
+    <span class="n">emuHelper</span><span class="o">.</span><span class="n">dispose</span><span class="p">()</span>
+
+<span class="n">main</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>This gave the following output:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Emulation</span> <span class="n">starting</span> <span class="n">at</span> <span class="mh">0x1000035c</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x1000035c</span> <span class="p">(</span><span class="n">push</span> <span class="p">{</span><span class="n">r4</span><span class="p">,</span><span class="n">lr</span><span class="p">})</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x1000035e</span> <span class="p">(</span><span class="n">bl</span> <span class="mh">0x100045ec</span><span class="p">)</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100045ec</span> <span class="p">(</span><span class="n">push</span> <span class="p">{</span><span class="n">r4</span><span class="p">,</span><span class="n">lr</span><span class="p">})</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100045ee</span> <span class="p">(</span><span class="n">bl</span> <span class="mh">0x10004898</span><span class="p">)</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x10004898</span> <span class="p">(</span><span class="n">push</span> <span class="p">{</span><span class="n">r4</span><span class="p">,</span><span class="n">r5</span><span class="p">,</span><span class="n">r6</span><span class="p">,</span><span class="n">lr</span><span class="p">})</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x1000489a</span> <span class="p">(</span><span class="n">sub</span> <span class="n">sp</span><span class="p">,</span><span class="c1">#0x10)</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x1000489c</span> <span class="p">(</span><span class="n">movs</span> <span class="n">r3</span><span class="p">,</span><span class="c1">#0xd0)</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x1000489e</span> <span class="p">(</span><span class="n">lsls</span> <span class="n">r3</span><span class="p">,</span><span class="n">r3</span><span class="p">,</span><span class="c1">#0x18)</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100048a0</span> <span class="p">(</span><span class="n">ldrb</span> <span class="n">r2</span><span class="p">,[</span><span class="n">r3</span><span class="p">,</span><span class="c1">#0x0])</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100048a2</span> <span class="p">(</span><span class="n">ldr</span> <span class="n">r3</span><span class="p">,[</span><span class="mh">0x10004958</span><span class="p">])</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100048a4</span> <span class="p">(</span><span class="n">strb</span> <span class="n">r2</span><span class="p">,[</span><span class="n">r3</span><span class="p">,</span><span class="c1">#0x0])</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100048a6</span> <span class="p">(</span><span class="n">ldr</span> <span class="n">r3</span><span class="p">,[</span><span class="mh">0x1000495c</span><span class="p">])</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100048a8</span> <span class="p">(</span><span class="n">ldrb</span> <span class="n">r3</span><span class="p">,[</span><span class="n">r3</span><span class="p">,</span><span class="c1">#0x0])</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100048aa</span> <span class="p">(</span><span class="n">bl</span> <span class="mh">0x100069cc</span><span class="p">)</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100069cc</span> <span class="p">(</span><span class="n">push</span> <span class="p">{</span><span class="n">r4</span><span class="p">,</span><span class="n">lr</span><span class="p">})</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100069ce</span> <span class="p">(</span><span class="n">movs</span> <span class="n">r0</span><span class="p">,</span><span class="c1">#0x0)</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100069d0</span> <span class="p">(</span><span class="n">bl</span> <span class="mh">0x100054c8</span><span class="p">)</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100054c8</span> <span class="p">(</span><span class="n">push</span> <span class="p">{</span><span class="n">r4</span><span class="p">,</span><span class="n">r5</span><span class="p">,</span><span class="n">r6</span><span class="p">,</span><span class="n">lr</span><span class="p">})</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100054ca</span> <span class="p">(</span><span class="n">movs</span> <span class="n">r5</span><span class="p">,</span><span class="n">r0</span><span class="p">)</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100054cc</span> <span class="p">(</span><span class="n">ldr</span> <span class="n">r3</span><span class="p">,[</span><span class="mh">0x1000556c</span><span class="p">])</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100054ce</span> <span class="p">(</span><span class="n">ldrb</span> <span class="n">r0</span><span class="p">,[</span><span class="n">r3</span><span class="p">,</span><span class="c1">#0x0])</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100054d0</span> <span class="p">(</span><span class="n">cmp</span> <span class="n">r0</span><span class="p">,</span><span class="c1">#0x0)</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100054d2</span> <span class="p">(</span><span class="n">beq</span> <span class="mh">0x100054d6</span><span class="p">)</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100054d6</span> <span class="p">(</span><span class="n">movs</span> <span class="n">r2</span><span class="p">,</span><span class="c1">#0x53)</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100054d8</span> <span class="p">(</span><span class="n">movs</span> <span class="n">r1</span><span class="p">,</span><span class="c1">#0x0)</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100054da</span> <span class="p">(</span><span class="n">ldr</span> <span class="n">r0</span><span class="p">,[</span><span class="mh">0x10005570</span><span class="p">])</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100054dc</span> <span class="p">(</span><span class="n">bl</span> <span class="mh">0x10004340</span><span class="p">)</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x10004340</span> <span class="p">(</span><span class="n">ldr</span> <span class="n">r3</span><span class="p">,[</span><span class="mh">0x10004348</span><span class="p">])</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x10004342</span> <span class="p">(</span><span class="n">ldr</span> <span class="n">r3</span><span class="p">,[</span><span class="n">r3</span><span class="p">,</span><span class="c1">#0x0])</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x10004344</span> <span class="p">(</span><span class="n">bx</span> <span class="n">r3</span><span class="p">)</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x0000534c</span> <span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+<span class="n">emulate_rp2040</span><span class="o">.</span><span class="n">py</span><span class="o">&gt;</span> <span class="n">Emulation</span> <span class="n">Error</span><span class="p">:</span> <span class="s1">&#39;Instruction decode failed (Bytes do not form a legal instruction.), PC=0000534c&#39;</span>
+</pre></div>
+</div>
+<p>By analysing the decompiled binary I could see that the following function calls were made before the error happened: main() &gt; stdio_init_all() &gt; stdio_usb_init() &gt; tusb_init() &gt; tud_init() &gt; __wrap_memset(void)</p>
+<p>The __wrap_memset(void) function decompiles to this:</p>
+<div class="highlight-C notranslate"><div class="highlight"><pre><span></span><span class="kt">_Bool</span><span class="w"> </span><span class="nf">tud_init</span><span class="p">(</span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">rhport</span><span class="p">)</span>
+
+<span class="p">{</span>
+<span class="w">    </span><span class="p">...</span>
+<span class="w">    </span><span class="n">__wrap_memset</span><span class="p">(</span><span class="o">&amp;</span><span class="n">_usb_dev</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mh">0x53</span><span class="p">);</span>
+<span class="w">    </span><span class="p">...</span>
+<span class="p">}</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">__wrap_memset</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+
+<span class="p">{</span>
+<span class="w">                    </span><span class="cm">/* WARNING: Treating indirect jump as call */</span>
+<span class="w">    </span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="n">code</span><span class="w"> </span><span class="o">*</span><span class="p">)</span><span class="mh">0x534d</span><span class="p">)();</span>
+<span class="w">    </span><span class="k">return</span><span class="p">;</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 </section>
@@ -111,7 +222,7 @@
 <h3>Navigation</h3>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="linux_gaming.html">Linux Gaming</a></li>
-<li class="toctree-l1 current"><a class="reference internal" href="embedded_notes.html">Linux Gaming</a><ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="embedded_notes.html">Embedded Notes</a><ul class="current">
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Emulating the RP2040 with Ghidra</a></li>
 <li class="toctree-l2"><a class="reference internal" href="basic_unit_test_library.html">Basic Unit Test Library</a></li>
 </ul>
@@ -122,8 +233,8 @@
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
-  <li><a href="embedded_notes.html">Linux Gaming</a><ul>
-      <li>Previous: <a href="embedded_notes.html" title="previous chapter">Linux Gaming</a></li>
+  <li><a href="embedded_notes.html">Embedded Notes</a><ul>
+      <li>Previous: <a href="embedded_notes.html" title="previous chapter">Embedded Notes</a></li>
       <li>Next: <a href="basic_unit_test_library.html" title="next chapter">Basic Unit Test Library</a></li>
   </ul></li>
   </ul></li>
