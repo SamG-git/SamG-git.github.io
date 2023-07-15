@@ -39,8 +39,8 @@
 <h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Permalink to this heading">¶</a></h2>
 <p>In order to follow these notes, both the latest version of Ghidra and the RP2040 SDK must be installed. Resources on how to do this can be found here:</p>
 <ul class="simple">
-<li><p><cite>Install Ghidra &lt;https://ghidra-sre.org/InstallationGuide.html&gt;</cite></p></li>
-<li><p><cite>Install RP2040 SDK &lt;https://datasheets.raspberrypi.com/pico/getting-started-with-pico.pdf&gt;</cite></p></li>
+<li><p><a class="reference external" href="https://ghidra-sre.org/InstallationGuide.html">Install Ghidra</a></p></li>
+<li><p><a class="reference external" href="https://datasheets.raspberrypi.com/pico/getting-started-with-pico.pdf">Install RP2040 SDK</a></p></li>
 </ul>
 </section>
 <section id="building-hello-world">
@@ -90,8 +90,8 @@
 </pre></div>
 </div>
 </section>
-<section id="attempting-to-emulate-main">
-<h2>Attempting to Emulate Main<a class="headerlink" href="#attempting-to-emulate-main" title="Permalink to this heading">¶</a></h2>
+<section id="emulating-main-attempt-1">
+<h2>Emulating Main (Attempt 1)<a class="headerlink" href="#emulating-main-attempt-1" title="Permalink to this heading">¶</a></h2>
 <p>Once the code had been compiled, I started a new Ghidra project and imported the ELF file. I then ran Ghidra’s automated analysis tools and had a quick look through the decompiled code.</p>
 <p>Initially, I attempted to emulate main by running the following Ghidra script:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ghidra.app.emulator</span> <span class="kn">import</span> <span class="n">EmulatorHelper</span>
@@ -187,7 +187,7 @@
 
 <span class="p">{</span>
 <span class="w">    </span><span class="p">...</span>
-<span class="w">    </span><span class="n">__wrap_memset</span><span class="p">(</span><span class="o">&amp;</span><span class="n">_usb_dev</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mh">0x53</span><span class="p">);</span>
+<span class="w">    </span><span class="n">__wrap_memset</span><span class="p">(</span><span class="o">&amp;</span><span class="n">_usbd_dev</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mh">0x53</span><span class="p">);</span>
 <span class="w">    </span><span class="p">...</span>
 <span class="p">}</span>
 
@@ -200,7 +200,95 @@
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>The emulator is unable to find valid instructions at address 0x534d and therefore throws an error. By looking at the RP2040 datasheet we can see that the first 16kB of memory, starting at address 0x00000000, is the ROM fixed at the time of silicon manufacture. Therefore, it would seem that the program is trying to execute some code baked into the ROM.</p>
+<p>The emulator is unable to find valid instructions at address 0x534d and therefore throws an error. It looks like the __wrap_memset() function should be setting 83 bytes of memory to 0 at the address of _usb_dev, however this does not appear to be what the __wrap_memset is actually doing. Looking at the Ghidra decompilation, we can see that _usbd_dev has an address -f 0x2000097C.</p>
+</section>
+<section id="creating-a-memory-map">
+<h2>Creating A Memory Map<a class="headerlink" href="#creating-a-memory-map" title="Permalink to this heading">¶</a></h2>
+<p>One way to improve the emulation accuracy is to give the emulator a representative map of the memory as present on the device. To do this, follow the steps in the link below to get a GDB link running using a pico debug probe:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://www.raspberrypi.com/documentation/microcontrollers/debug-probe.html">Pico Debug Probe</a></p></li>
+</ul>
+<p>Next, run the following commands to dump the contents of the relevant sections of memory to binary files.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="n">gdb</span><span class="p">)</span> <span class="n">dump</span> <span class="n">binary</span> <span class="n">memory</span> <span class="n">pico_rom</span><span class="o">.</span><span class="n">bin</span> <span class="mh">0x00000000</span> <span class="mh">0x00004000</span>
+<span class="p">(</span><span class="n">gdb</span><span class="p">)</span> <span class="n">dump</span> <span class="n">binary</span> <span class="n">memory</span> <span class="n">pico_xip</span><span class="o">.</span><span class="n">bin</span> <span class="mh">0x10000000</span> <span class="mh">0x11000000</span>
+<span class="p">(</span><span class="n">gdb</span><span class="p">)</span> <span class="n">dump</span> <span class="n">binary</span> <span class="n">memory</span> <span class="n">pico_sram_0_5</span><span class="o">.</span><span class="n">bin</span> <span class="mh">0x20000000</span> <span class="mh">0x20042000</span>
+<span class="p">(</span><span class="n">gdb</span><span class="p">)</span> <span class="n">dump</span> <span class="n">binary</span> <span class="n">memory</span> <span class="n">pico_peripherals</span><span class="o">.</span><span class="n">bin</span> <span class="mh">0x40000000</span> <span class="mh">0x40080000</span>
+<span class="p">(</span><span class="n">gdb</span><span class="p">)</span> <span class="n">dump</span> <span class="n">binary</span> <span class="n">memory</span> <span class="n">pico_sram_alias</span><span class="o">.</span><span class="n">bin</span> <span class="mh">0x21000000</span> <span class="mh">0x21040000</span>
+<span class="p">(</span><span class="n">gdb</span><span class="p">)</span> <span class="n">dump</span> <span class="n">binary</span> <span class="n">memory</span> <span class="n">pico_dma</span><span class="o">.</span><span class="n">bin</span> <span class="mh">0x50000000</span> <span class="mh">0x50100000</span>
+<span class="p">(</span><span class="n">gdb</span><span class="p">)</span> <span class="n">dump</span> <span class="n">binary</span> <span class="n">memory</span> <span class="n">pico_usb</span><span class="o">.</span><span class="n">bin</span> <span class="mh">0x50100000</span> <span class="mh">0x50200000</span>
+<span class="p">(</span><span class="n">gdb</span><span class="p">)</span> <span class="n">dump</span> <span class="n">binary</span> <span class="n">memory</span> <span class="n">pico_ahb_lite</span><span class="o">.</span><span class="n">bin</span> <span class="mh">0x50200000</span> <span class="mh">0x50500000</span>
+<span class="p">(</span><span class="n">gdb</span><span class="p">)</span> <span class="n">dump</span> <span class="n">binary</span> <span class="n">memory</span> <span class="n">pico_sio</span><span class="o">.</span><span class="n">bin</span> <span class="mh">0xd0000000</span> <span class="mh">0xd000017c</span>
+<span class="p">(</span><span class="n">gdb</span><span class="p">)</span> <span class="n">dump</span> <span class="n">binary</span> <span class="n">memory</span> <span class="n">pico_ppb</span><span class="o">.</span><span class="n">bin</span> <span class="mh">0xe0000000</span> <span class="mh">0xe0100000</span>
+</pre></div>
+</div>
+<p>These can then be loaded into memory before the Ghidra script starts emulation. Add the following before the for loop in the main function of the emulation script:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nb">dir</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">askDirectory</span><span class="p">(</span><span class="s2">&quot;Select Memory Directory&quot;</span><span class="p">,</span> <span class="s2">&quot;OK&quot;</span><span class="p">))</span><span class="o">+</span><span class="s2">&quot;/&quot;</span>
+
+<span class="c1"># Map memory</span>
+<span class="n">ROM</span>  <span class="o">=</span> <span class="n">read_memory</span><span class="p">(</span><span class="nb">dir</span><span class="o">+</span><span class="s2">&quot;pico_rom.bin&quot;</span><span class="p">)</span>
+<span class="n">XIP</span>  <span class="o">=</span> <span class="n">read_memory</span><span class="p">(</span><span class="nb">dir</span><span class="o">+</span><span class="s2">&quot;pico_xip.bin&quot;</span><span class="p">)</span>
+<span class="n">SRAM</span> <span class="o">=</span> <span class="n">read_memory</span><span class="p">(</span><span class="nb">dir</span><span class="o">+</span><span class="s2">&quot;pico_sram_0_5.bin&quot;</span><span class="p">)</span>
+<span class="n">SRAM_AL</span> <span class="o">=</span> <span class="n">read_memory</span><span class="p">(</span><span class="nb">dir</span><span class="o">+</span><span class="s2">&quot;pico_sram_alias.bin&quot;</span><span class="p">)</span>
+<span class="n">AHB_LITE</span> <span class="o">=</span> <span class="n">read_memory</span><span class="p">(</span><span class="nb">dir</span><span class="o">+</span><span class="s2">&quot;pico_ahb_lite.bin&quot;</span><span class="p">)</span>
+<span class="n">DMA</span> <span class="o">=</span> <span class="n">read_memory</span><span class="p">(</span><span class="nb">dir</span><span class="o">+</span><span class="s2">&quot;pico_dma.bin&quot;</span><span class="p">)</span>
+<span class="n">PERIPH</span> <span class="o">=</span> <span class="n">read_memory</span><span class="p">(</span><span class="nb">dir</span><span class="o">+</span><span class="s2">&quot;pico_peripherals.bin&quot;</span><span class="p">)</span>
+<span class="n">PPB</span> <span class="o">=</span> <span class="n">read_memory</span><span class="p">(</span><span class="nb">dir</span><span class="o">+</span><span class="s2">&quot;pico_ppb.bin&quot;</span><span class="p">)</span>
+<span class="n">SIO</span> <span class="o">=</span> <span class="n">read_memory</span><span class="p">(</span><span class="nb">dir</span><span class="o">+</span><span class="s2">&quot;pico_sio.bin&quot;</span><span class="p">)</span>
+<span class="n">USB</span> <span class="o">=</span> <span class="n">read_memory</span><span class="p">(</span><span class="nb">dir</span><span class="o">+</span><span class="s2">&quot;pico_usb.bin&quot;</span><span class="p">)</span>
+
+<span class="n">currentProgramMemory</span> <span class="o">=</span> <span class="n">emuHelper</span><span class="o">.</span><span class="n">readMemory</span><span class="p">(</span><span class="n">getAddress</span><span class="p">(</span><span class="mh">0x10000000</span><span class="p">),</span> <span class="mh">0x01000000</span><span class="p">)</span>
+
+
+<span class="c1"># Write Memory</span>
+<span class="n">emuHelper</span><span class="o">.</span><span class="n">writeMemory</span><span class="p">(</span><span class="n">getAddress</span><span class="p">(</span><span class="mh">0x00000000</span><span class="p">),</span> <span class="n">ROM</span><span class="p">)</span>
+<span class="n">emuHelper</span><span class="o">.</span><span class="n">writeMemory</span><span class="p">(</span><span class="n">getAddress</span><span class="p">(</span><span class="mh">0x12000000</span><span class="p">),</span> <span class="n">currentProgramMemory</span><span class="p">)</span>
+<span class="n">emuHelper</span><span class="o">.</span><span class="n">writeMemory</span><span class="p">(</span><span class="n">getAddress</span><span class="p">(</span><span class="mh">0x13000000</span><span class="p">),</span> <span class="n">currentProgramMemory</span><span class="p">)</span>
+<span class="n">emuHelper</span><span class="o">.</span><span class="n">writeMemory</span><span class="p">(</span><span class="n">getAddress</span><span class="p">(</span><span class="mh">0x14000000</span><span class="p">),</span> <span class="n">currentProgramMemory</span><span class="p">)</span>
+<span class="n">emuHelper</span><span class="o">.</span><span class="n">writeMemory</span><span class="p">(</span><span class="n">getAddress</span><span class="p">(</span><span class="mh">0x18000000</span><span class="p">),</span> <span class="n">currentProgramMemory</span><span class="p">)</span>
+<span class="n">emuHelper</span><span class="o">.</span><span class="n">writeMemory</span><span class="p">(</span><span class="n">getAddress</span><span class="p">(</span><span class="mh">0x20000000</span><span class="p">),</span> <span class="n">SRAM</span><span class="p">)</span>
+<span class="n">emuHelper</span><span class="o">.</span><span class="n">writeMemory</span><span class="p">(</span><span class="n">getAddress</span><span class="p">(</span><span class="mh">0x21000000</span><span class="p">),</span> <span class="n">SRAM_AL</span><span class="p">)</span>
+<span class="n">emuHelper</span><span class="o">.</span><span class="n">writeMemory</span><span class="p">(</span><span class="n">getAddress</span><span class="p">(</span><span class="mh">0x40000000</span><span class="p">),</span> <span class="n">PERIPH</span><span class="p">)</span>
+<span class="n">emuHelper</span><span class="o">.</span><span class="n">writeMemory</span><span class="p">(</span><span class="n">getAddress</span><span class="p">(</span><span class="mh">0x50000000</span><span class="p">),</span> <span class="n">DMA</span><span class="p">)</span>
+<span class="n">emuHelper</span><span class="o">.</span><span class="n">writeMemory</span><span class="p">(</span><span class="n">getAddress</span><span class="p">(</span><span class="mh">0x50100000</span><span class="p">),</span> <span class="n">USB</span><span class="p">)</span>
+<span class="n">emuHelper</span><span class="o">.</span><span class="n">writeMemory</span><span class="p">(</span><span class="n">getAddress</span><span class="p">(</span><span class="mh">0x50200000</span><span class="p">),</span> <span class="n">AHB_LITE</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This will allow the emulation to get much futher, however the error “Unimplemented CALLOTHER pcodeop (DataMemoryBarrier), PC=10001d40” will be encountered once the emulator tries to execute the dmb (DataMemoryBarrier) instruction.</p>
+</section>
+<section id="skipping-sections-of-code">
+<h2>Skipping Sections of Code<a class="headerlink" href="#skipping-sections-of-code" title="Permalink to this heading">¶</a></h2>
+<p>To get around the error we can tell Ghidra to skip certain parts of the executable. Append the following before the for loop in the emulation script:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Set up list of known-error addresses</span>
+<span class="n">err_addr</span>  <span class="o">=</span> <span class="p">[</span><span class="mh">0x10001d40</span><span class="p">,</span> <span class="mh">0x10000384</span><span class="p">,</span> <span class="mh">0x100003d4</span><span class="p">]</span>
+<span class="n">skip_addr</span> <span class="o">=</span> <span class="p">[</span><span class="mh">0x10001d44</span><span class="p">,</span> <span class="mh">0x100003c8</span><span class="p">,</span> <span class="mh">0x100003d8</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>And alter the loop to look like this:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Emulation starting at 0x</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mainFunctionEntry</span><span class="p">))</span>
+<span class="k">while</span> <span class="n">monitor</span><span class="o">.</span><span class="n">isCancelled</span><span class="p">()</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+
+    <span class="n">executionAddress</span> <span class="o">=</span> <span class="n">emuHelper</span><span class="o">.</span><span class="n">getExecutionAddress</span><span class="p">()</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">executionAddress</span> <span class="o">==</span> <span class="n">controlledReturnAddr</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Emulation complete.&quot;</span><span class="p">)</span>
+        <span class="k">return</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Address: 0x</span><span class="si">{}</span><span class="s2"> (</span><span class="si">{}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">executionAddress</span><span class="p">,</span> <span class="n">getInstructionAt</span><span class="p">(</span><span class="n">executionAddress</span><span class="p">)))</span>
+
+    <span class="c1"># single step emulation</span>
+    <span class="n">success</span> <span class="o">=</span> <span class="n">emuHelper</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">monitor</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">success</span> <span class="o">==</span> <span class="kc">False</span><span class="p">):</span>
+        <span class="n">lastError</span> <span class="o">=</span> <span class="n">emuHelper</span><span class="o">.</span><span class="n">getLastError</span><span class="p">()</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">executionAddress</span><span class="o">.</span><span class="n">offset</span> <span class="ow">in</span> <span class="n">err_addr</span><span class="p">):</span>
+            <span class="n">emuHelper</span><span class="o">.</span><span class="n">writeRegister</span><span class="p">(</span><span class="n">emuHelper</span><span class="o">.</span><span class="n">getPCRegister</span><span class="p">(),</span> <span class="n">skip_addr</span><span class="p">[</span><span class="n">err_addr</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">executionAddress</span><span class="o">.</span><span class="n">offset</span><span class="p">)])</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: &#39;</span><span class="si">{}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">lastError</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">printerr</span><span class="p">(</span><span class="s2">&quot;Emulation Error: &#39;</span><span class="si">{}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">lastError</span><span class="p">))</span>
+            <span class="k">return</span>
+
+<span class="n">emuHelper</span><span class="o">.</span><span class="n">dispose</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Whenever the emulator tries to execute an instruction storred in err_addr it will print a warning and skip to the instruction pointed to by skip_addr.</p>
 </section>
 </section>
 

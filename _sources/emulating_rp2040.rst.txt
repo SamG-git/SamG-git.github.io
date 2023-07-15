@@ -8,8 +8,8 @@ Prerequisites
 
 In order to follow these notes, both the latest version of Ghidra and the RP2040 SDK must be installed. Resources on how to do this can be found here:
 
-* `Install Ghidra <https://ghidra-sre.org/InstallationGuide.html>`
-* `Install RP2040 SDK <https://datasheets.raspberrypi.com/pico/getting-started-with-pico.pdf>`
+* `Install Ghidra <https://ghidra-sre.org/InstallationGuide.html>`_
+* `Install RP2040 SDK <https://datasheets.raspberrypi.com/pico/getting-started-with-pico.pdf>`_
 
 Building Hello World
 --------------------
@@ -62,7 +62,7 @@ I configures the CMakeLists.txt file to output only on the USB interface using t
         message(WARNING "not building hello_usb because TinyUSB submodule is not initialized in the SDK")
     endif()
 
-Attempting to Emulate Main
+Emulating Main (Attempt 1)
 --------------------------
 
 Once the code had been compiled, I started a new Ghidra project and imported the ELF file. I then ran Ghidra's automated analysis tools and had a quick look through the decompiled code. 
@@ -169,7 +169,7 @@ The __wrap_memset(void) function decompiles to this:
 
     {
         ...
-        __wrap_memset(&_usb_dev,0,0x53);
+        __wrap_memset(&_usbd_dev,0,0x53);
         ...
     }
 
@@ -181,4 +181,102 @@ The __wrap_memset(void) function decompiles to this:
         return;
     }
 
-The emulator is unable to find valid instructions at address 0x534d and therefore throws an error. By looking at the RP2040 datasheet we can see that the first 16kB of memory, starting at address 0x00000000, is the ROM fixed at the time of silicon manufacture. Therefore, it would seem that the program is trying to execute some code baked into the ROM. 
+The emulator is unable to find valid instructions at address 0x534d and therefore throws an error. It looks like the __wrap_memset() function should be setting 83 bytes of memory to 0 at the address of _usb_dev, however this does not appear to be what the __wrap_memset is actually doing. Looking at the Ghidra decompilation, we can see that _usbd_dev has an address -f 0x2000097C.
+
+Creating A Memory Map 
+---------------------
+
+One way to improve the emulation accuracy is to give the emulator a representative map of the memory as present on the device. To do this, follow the steps in the link below to get a GDB link running using a pico debug probe:
+
+* `Pico Debug Probe <https://www.raspberrypi.com/documentation/microcontrollers/debug-probe.html>`_
+
+Next, run the following commands to dump the contents of the relevant sections of memory to binary files.
+
+.. code-block::
+
+    (gdb) dump binary memory pico_rom.bin 0x00000000 0x00004000
+    (gdb) dump binary memory pico_xip.bin 0x10000000 0x11000000
+    (gdb) dump binary memory pico_sram_0_5.bin 0x20000000 0x20042000
+    (gdb) dump binary memory pico_peripherals.bin 0x40000000 0x40080000
+    (gdb) dump binary memory pico_sram_alias.bin 0x21000000 0x21040000
+    (gdb) dump binary memory pico_dma.bin 0x50000000 0x50100000
+    (gdb) dump binary memory pico_usb.bin 0x50100000 0x50200000
+    (gdb) dump binary memory pico_ahb_lite.bin 0x50200000 0x50500000
+    (gdb) dump binary memory pico_sio.bin 0xd0000000 0xd000017c
+    (gdb) dump binary memory pico_ppb.bin 0xe0000000 0xe0100000
+
+These can then be loaded into memory before the Ghidra script starts emulation. Add the following before the for loop in the main function of the emulation script:
+
+.. code-block:: python
+    
+    dir = str(askDirectory("Select Memory Directory", "OK"))+"/"
+    
+    # Map memory
+    ROM  = read_memory(dir+"pico_rom.bin")
+    XIP  = read_memory(dir+"pico_xip.bin")
+    SRAM = read_memory(dir+"pico_sram_0_5.bin")
+    SRAM_AL = read_memory(dir+"pico_sram_alias.bin")
+    AHB_LITE = read_memory(dir+"pico_ahb_lite.bin")
+    DMA = read_memory(dir+"pico_dma.bin")
+    PERIPH = read_memory(dir+"pico_peripherals.bin")
+    PPB = read_memory(dir+"pico_ppb.bin")
+    SIO = read_memory(dir+"pico_sio.bin")
+    USB = read_memory(dir+"pico_usb.bin")
+
+    currentProgramMemory = emuHelper.readMemory(getAddress(0x10000000), 0x01000000)
+
+    
+    # Write Memory
+    emuHelper.writeMemory(getAddress(0x00000000), ROM)
+    emuHelper.writeMemory(getAddress(0x12000000), currentProgramMemory)
+    emuHelper.writeMemory(getAddress(0x13000000), currentProgramMemory)
+    emuHelper.writeMemory(getAddress(0x14000000), currentProgramMemory)
+    emuHelper.writeMemory(getAddress(0x18000000), currentProgramMemory)
+    emuHelper.writeMemory(getAddress(0x20000000), SRAM)
+    emuHelper.writeMemory(getAddress(0x21000000), SRAM_AL)
+    emuHelper.writeMemory(getAddress(0x40000000), PERIPH)
+    emuHelper.writeMemory(getAddress(0x50000000), DMA)
+    emuHelper.writeMemory(getAddress(0x50100000), USB)
+    emuHelper.writeMemory(getAddress(0x50200000), AHB_LITE)
+
+This will allow the emulation to get much futher, however the error "Unimplemented CALLOTHER pcodeop (DataMemoryBarrier), PC=10001d40" will be encountered once the emulator tries to execute the dmb (DataMemoryBarrier) instruction. 
+
+Skipping Sections of Code 
+-------------------------
+
+To get around the error we can tell Ghidra to skip certain parts of the executable. Append the following before the for loop in the emulation script:
+
+.. code-block:: python
+
+    # Set up list of known-error addresses
+    err_addr  = [0x10001d40, 0x10000384, 0x100003d4]
+    skip_addr = [0x10001d44, 0x100003c8, 0x100003d8]
+
+And alter the loop to look like this:
+
+.. code-block:: python
+
+    print("Emulation starting at 0x{}".format(mainFunctionEntry))
+    while monitor.isCancelled() is False:
+        
+        executionAddress = emuHelper.getExecutionAddress()  
+        if (executionAddress == controlledReturnAddr):
+            print("Emulation complete.")
+            return
+
+        print("Address: 0x{} ({})".format(executionAddress, getInstructionAt(executionAddress)))
+
+        # single step emulation
+        success = emuHelper.step(monitor)
+        if (success == False):
+            lastError = emuHelper.getLastError()
+            if (executionAddress.offset in err_addr):
+                emuHelper.writeRegister(emuHelper.getPCRegister(), skip_addr[err_addr.index(executionAddress.offset)])
+                print("Warning: '{}'".format(lastError))
+            else:
+                printerr("Emulation Error: '{}'".format(lastError))
+                return
+
+    emuHelper.dispose()
+
+Whenever the emulator tries to execute an instruction storred in err_addr it will print a warning and skip to the instruction pointed to by skip_addr. 
