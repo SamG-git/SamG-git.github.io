@@ -1,7 +1,7 @@
 Emulating the RP2040 with Ghidra
 ================================
 
-Ghidra (an open-source SRE framework written by the NSA) provides a featureful emulator which works on all the achitectures Ghidra supports. These notes will show how to emulate a basic RP2040 ELF.
+Ghidra (an open-source SRE framework written by the NSA) provides a feature-full emulator which works on all the architectures Ghidra supports. These notes will show how to emulate a basic RP2040 ELF.
 
 Prerequisites
 -------------
@@ -65,7 +65,7 @@ I configures the CMakeLists.txt file to output only on the USB interface using t
 Emulating Main (Attempt 1)
 --------------------------
 
-Once the code had been compiled, I started a new Ghidra project and imported the ELF file. I then ran Ghidra's automated analysis tools and had a quick look through the decompiled code. 
+Once the code had been compiled, I started a new Ghidra project and imported the ELF file. I then ran Ghidra's automated analysis tools and had a quick look through the de-compiled code. 
 
 Initially, I attempted to emulate main by running the following Ghidra script:
 

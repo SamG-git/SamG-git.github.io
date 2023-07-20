@@ -34,7 +34,7 @@
             
   <section id="emulating-the-rp2040-with-ghidra">
 <h1>Emulating the RP2040 with Ghidra<a class="headerlink" href="#emulating-the-rp2040-with-ghidra" title="Permalink to this heading">¶</a></h1>
-<p>Ghidra (an open-source SRE framework written by the NSA) provides a featureful emulator which works on all the achitectures Ghidra supports. These notes will show how to emulate a basic RP2040 ELF.</p>
+<p>Ghidra (an open-source SRE framework written by the NSA) provides a feature-full emulator which works on all the architectures Ghidra supports. These notes will show how to emulate a basic RP2040 ELF.</p>
 <section id="prerequisites">
 <h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Permalink to this heading">¶</a></h2>
 <p>In order to follow these notes, both the latest version of Ghidra and the RP2040 SDK must be installed. Resources on how to do this can be found here:</p>
@@ -92,7 +92,7 @@
 </section>
 <section id="emulating-main-attempt-1">
 <h2>Emulating Main (Attempt 1)<a class="headerlink" href="#emulating-main-attempt-1" title="Permalink to this heading">¶</a></h2>
-<p>Once the code had been compiled, I started a new Ghidra project and imported the ELF file. I then ran Ghidra’s automated analysis tools and had a quick look through the decompiled code.</p>
+<p>Once the code had been compiled, I started a new Ghidra project and imported the ELF file. I then ran Ghidra’s automated analysis tools and had a quick look through the de-compiled code.</p>
 <p>Initially, I attempted to emulate main by running the following Ghidra script:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ghidra.app.emulator</span> <span class="kn">import</span> <span class="n">EmulatorHelper</span>
 <span class="kn">from</span> <span class="nn">ghidra.program.model.symbol</span> <span class="kn">import</span> <span class="n">SymbolUtilities</span>
@@ -314,6 +314,7 @@
 <li class="toctree-l1 current"><a class="reference internal" href="embedded_notes.html">Embedded Notes</a><ul class="current">
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Emulating the RP2040 with Ghidra</a></li>
 <li class="toctree-l2"><a class="reference internal" href="basic_unit_test_library.html">Basic Unit Test Library</a></li>
+<li class="toctree-l2"><a class="reference internal" href="msp430/msp430_notes.html">MSP430 Notes</a></li>
 </ul>
 </li>
 </ul>
