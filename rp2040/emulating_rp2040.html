@@ -1,0 +1,360 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>Emulating the RP2040 with Ghidra &#8212; Sam G Notes  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="emulating-the-rp2040-with-ghidra">
+<h1>Emulating the RP2040 with Ghidra<a class="headerlink" href="#emulating-the-rp2040-with-ghidra" title="Permalink to this heading">¶</a></h1>
+<p>Ghidra (an open-source SRE framework written by the NSA) provides a feature-full emulator which works on all the architectures Ghidra supports. These notes will show how to emulate a basic RP2040 ELF.</p>
+<section id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Permalink to this heading">¶</a></h2>
+<p>In order to follow these notes, both the latest version of Ghidra and the RP2040 SDK must be installed. Resources on how to do this can be found here:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://ghidra-sre.org/InstallationGuide.html">Install Ghidra</a></p></li>
+<li><p><a class="reference external" href="https://datasheets.raspberrypi.com/pico/getting-started-with-pico.pdf">Install RP2040 SDK</a></p></li>
+</ul>
+</section>
+<section id="building-hello-world">
+<h2>Building Hello World<a class="headerlink" href="#building-hello-world" title="Permalink to this heading">¶</a></h2>
+<p>The first binary I attempted to emulate was a basic Hello World script consisting of the following main function:</p>
+<div class="highlight-C notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;pico/stdlib.h&quot;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">stdio_init_all</span><span class="p">();</span>
+<span class="w">    </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Hello, world!</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="w">        </span><span class="n">sleep_ms</span><span class="p">(</span><span class="mi">1000</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>I configures the CMakeLists.txt file to output only on the USB interface using the following:</p>
+<div class="highlight-cmake notranslate"><div class="highlight"><pre><span></span><span class="nb">cmake_minimum_required</span><span class="p">(</span><span class="s">VERSION</span><span class="w"> </span><span class="s">3.13</span><span class="p">)</span>
+
+<span class="nb">include</span><span class="p">(</span><span class="s">pico_sdk_import.cmake</span><span class="p">)</span>
+
+<span class="nb">project</span><span class="p">(</span><span class="s">hello_serial</span><span class="w"> </span><span class="s">C</span><span class="w"> </span><span class="s">CXX</span><span class="w"> </span><span class="s">ASM</span><span class="p">)</span>
+<span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_C_STANDARD</span><span class="w"> </span><span class="s">11</span><span class="p">)</span>
+<span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_CXX_STANDARD</span><span class="w"> </span><span class="s">17</span><span class="p">)</span>
+
+<span class="nb">pico_sdk_init</span><span class="p">()</span>
+
+<span class="nb">if</span><span class="w"> </span><span class="p">(</span><span class="s">TARGET</span><span class="w"> </span><span class="s">tinyusb_device</span><span class="p">)</span>
+<span class="w">    </span><span class="nb">add_executable</span><span class="p">(</span><span class="s">pico_hello</span>
+<span class="w">            </span><span class="s">hello_serial.c</span>
+<span class="w">            </span><span class="p">)</span>
+
+<span class="w">    </span><span class="c"># pull in common dependencies</span>
+<span class="w">    </span><span class="nb">target_link_libraries</span><span class="p">(</span><span class="s">pico_hello</span><span class="w"> </span><span class="s">pico_stdlib</span><span class="p">)</span>
+
+<span class="w">    </span><span class="c"># enable usb output, disable uart output</span>
+<span class="w">    </span><span class="nb">pico_enable_stdio_usb</span><span class="p">(</span><span class="s">pico_hello</span><span class="w"> </span><span class="s">1</span><span class="p">)</span>
+<span class="w">    </span><span class="nb">pico_enable_stdio_uart</span><span class="p">(</span><span class="s">pico_hello</span><span class="w"> </span><span class="s">0</span><span class="p">)</span>
+
+<span class="w">    </span><span class="c"># create map/bin/hex/uf2 file etc.</span>
+<span class="w">    </span><span class="nb">pico_add_extra_outputs</span><span class="p">(</span><span class="s">pico_hello</span><span class="p">)</span>
+
+<span class="nb">elseif</span><span class="p">(</span><span class="s">PICO_ON_DEVICE</span><span class="p">)</span>
+<span class="w">    </span><span class="nb">message</span><span class="p">(</span><span class="s">WARNING</span><span class="w"> </span><span class="s2">&quot;not building hello_usb because TinyUSB submodule is not initialized in the SDK&quot;</span><span class="p">)</span>
+<span class="nb">endif</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="emulating-main-attempt-1">
+<h2>Emulating Main (Attempt 1)<a class="headerlink" href="#emulating-main-attempt-1" title="Permalink to this heading">¶</a></h2>
+<p>Once the code had been compiled, I started a new Ghidra project and imported the ELF file. I then ran Ghidra’s automated analysis tools and had a quick look through the de-compiled code.</p>
+<p>Initially, I attempted to emulate main by running the following Ghidra script:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ghidra.app.emulator</span> <span class="kn">import</span> <span class="n">EmulatorHelper</span>
+<span class="kn">from</span> <span class="nn">ghidra.program.model.symbol</span> <span class="kn">import</span> <span class="n">SymbolUtilities</span>
+
+
+<span class="k">def</span> <span class="nf">getAddress</span><span class="p">(</span><span class="n">offset</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">currentProgram</span><span class="o">.</span><span class="n">getAddressFactory</span><span class="p">()</span><span class="o">.</span><span class="n">getDefaultAddressSpace</span><span class="p">()</span><span class="o">.</span><span class="n">getAddress</span><span class="p">(</span><span class="n">offset</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">getSymbolAddress</span><span class="p">(</span><span class="n">symbolName</span><span class="p">):</span>
+    <span class="n">symbol</span> <span class="o">=</span> <span class="n">SymbolUtilities</span><span class="o">.</span><span class="n">getLabelOrFunctionSymbol</span><span class="p">(</span><span class="n">currentProgram</span><span class="p">,</span> <span class="n">symbolName</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">symbol</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">symbol</span><span class="o">.</span><span class="n">getAddress</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span><span class="p">(</span><span class="s2">&quot;Failed to locate label: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">symbolName</span><span class="p">))</span>
+
+<span class="k">def</span> <span class="nf">getProgramRegisterList</span><span class="p">(</span><span class="n">currentProgram</span><span class="p">):</span>
+    <span class="n">pc</span> <span class="o">=</span> <span class="n">currentProgram</span><span class="o">.</span><span class="n">getProgramContext</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">pc</span><span class="o">.</span><span class="n">registers</span>
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+    <span class="n">CONTROLLED_RETURN_OFFSET</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="n">mainFunctionEntry</span> <span class="o">=</span> <span class="n">getSymbolAddress</span><span class="p">(</span><span class="s2">&quot;main&quot;</span><span class="p">)</span>
+    <span class="n">emuHelper</span> <span class="o">=</span> <span class="n">EmulatorHelper</span><span class="p">(</span><span class="n">currentProgram</span><span class="p">)</span>
+    <span class="n">controlledReturnAddr</span> <span class="o">=</span> <span class="n">getAddress</span><span class="p">(</span><span class="n">CONTROLLED_RETURN_OFFSET</span><span class="p">)</span>
+
+    <span class="c1"># Tell emulator to run the main() function</span>
+    <span class="n">mainFunctionEntryLong</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="s2">&quot;0x</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mainFunctionEntry</span><span class="p">),</span> <span class="mi">16</span><span class="p">)</span>
+    <span class="n">emuHelper</span><span class="o">.</span><span class="n">writeRegister</span><span class="p">(</span><span class="n">emuHelper</span><span class="o">.</span><span class="n">getPCRegister</span><span class="p">(),</span> <span class="n">mainFunctionEntryLong</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Emulation starting at 0x</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mainFunctionEntry</span><span class="p">))</span>
+    <span class="k">while</span> <span class="n">monitor</span><span class="o">.</span><span class="n">isCancelled</span><span class="p">()</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+
+        <span class="n">executionAddress</span> <span class="o">=</span> <span class="n">emuHelper</span><span class="o">.</span><span class="n">getExecutionAddress</span><span class="p">()</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">executionAddress</span> <span class="o">==</span> <span class="n">controlledReturnAddr</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Emulation complete.&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Address: 0x</span><span class="si">{}</span><span class="s2"> (</span><span class="si">{}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">executionAddress</span><span class="p">,</span> <span class="n">getInstructionAt</span><span class="p">(</span><span class="n">executionAddress</span><span class="p">)))</span>
+
+        <span class="c1"># single step emulation</span>
+        <span class="n">success</span> <span class="o">=</span> <span class="n">emuHelper</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">monitor</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">success</span> <span class="o">==</span> <span class="kc">False</span><span class="p">):</span>
+            <span class="n">lastError</span> <span class="o">=</span> <span class="n">emuHelper</span><span class="o">.</span><span class="n">getLastError</span><span class="p">()</span>
+            <span class="n">printerr</span><span class="p">(</span><span class="s2">&quot;Emulation Error: &#39;</span><span class="si">{}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">lastError</span><span class="p">))</span>
+            <span class="k">return</span>
+
+    <span class="n">emuHelper</span><span class="o">.</span><span class="n">dispose</span><span class="p">()</span>
+
+<span class="n">main</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>This gave the following output:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Emulation</span> <span class="n">starting</span> <span class="n">at</span> <span class="mh">0x1000035c</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x1000035c</span> <span class="p">(</span><span class="n">push</span> <span class="p">{</span><span class="n">r4</span><span class="p">,</span><span class="n">lr</span><span class="p">})</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x1000035e</span> <span class="p">(</span><span class="n">bl</span> <span class="mh">0x100045ec</span><span class="p">)</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100045ec</span> <span class="p">(</span><span class="n">push</span> <span class="p">{</span><span class="n">r4</span><span class="p">,</span><span class="n">lr</span><span class="p">})</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100045ee</span> <span class="p">(</span><span class="n">bl</span> <span class="mh">0x10004898</span><span class="p">)</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x10004898</span> <span class="p">(</span><span class="n">push</span> <span class="p">{</span><span class="n">r4</span><span class="p">,</span><span class="n">r5</span><span class="p">,</span><span class="n">r6</span><span class="p">,</span><span class="n">lr</span><span class="p">})</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x1000489a</span> <span class="p">(</span><span class="n">sub</span> <span class="n">sp</span><span class="p">,</span><span class="c1">#0x10)</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x1000489c</span> <span class="p">(</span><span class="n">movs</span> <span class="n">r3</span><span class="p">,</span><span class="c1">#0xd0)</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x1000489e</span> <span class="p">(</span><span class="n">lsls</span> <span class="n">r3</span><span class="p">,</span><span class="n">r3</span><span class="p">,</span><span class="c1">#0x18)</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100048a0</span> <span class="p">(</span><span class="n">ldrb</span> <span class="n">r2</span><span class="p">,[</span><span class="n">r3</span><span class="p">,</span><span class="c1">#0x0])</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100048a2</span> <span class="p">(</span><span class="n">ldr</span> <span class="n">r3</span><span class="p">,[</span><span class="mh">0x10004958</span><span class="p">])</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100048a4</span> <span class="p">(</span><span class="n">strb</span> <span class="n">r2</span><span class="p">,[</span><span class="n">r3</span><span class="p">,</span><span class="c1">#0x0])</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100048a6</span> <span class="p">(</span><span class="n">ldr</span> <span class="n">r3</span><span class="p">,[</span><span class="mh">0x1000495c</span><span class="p">])</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100048a8</span> <span class="p">(</span><span class="n">ldrb</span> <span class="n">r3</span><span class="p">,[</span><span class="n">r3</span><span class="p">,</span><span class="c1">#0x0])</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100048aa</span> <span class="p">(</span><span class="n">bl</span> <span class="mh">0x100069cc</span><span class="p">)</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100069cc</span> <span class="p">(</span><span class="n">push</span> <span class="p">{</span><span class="n">r4</span><span class="p">,</span><span class="n">lr</span><span class="p">})</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100069ce</span> <span class="p">(</span><span class="n">movs</span> <span class="n">r0</span><span class="p">,</span><span class="c1">#0x0)</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100069d0</span> <span class="p">(</span><span class="n">bl</span> <span class="mh">0x100054c8</span><span class="p">)</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100054c8</span> <span class="p">(</span><span class="n">push</span> <span class="p">{</span><span class="n">r4</span><span class="p">,</span><span class="n">r5</span><span class="p">,</span><span class="n">r6</span><span class="p">,</span><span class="n">lr</span><span class="p">})</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100054ca</span> <span class="p">(</span><span class="n">movs</span> <span class="n">r5</span><span class="p">,</span><span class="n">r0</span><span class="p">)</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100054cc</span> <span class="p">(</span><span class="n">ldr</span> <span class="n">r3</span><span class="p">,[</span><span class="mh">0x1000556c</span><span class="p">])</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100054ce</span> <span class="p">(</span><span class="n">ldrb</span> <span class="n">r0</span><span class="p">,[</span><span class="n">r3</span><span class="p">,</span><span class="c1">#0x0])</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100054d0</span> <span class="p">(</span><span class="n">cmp</span> <span class="n">r0</span><span class="p">,</span><span class="c1">#0x0)</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100054d2</span> <span class="p">(</span><span class="n">beq</span> <span class="mh">0x100054d6</span><span class="p">)</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100054d6</span> <span class="p">(</span><span class="n">movs</span> <span class="n">r2</span><span class="p">,</span><span class="c1">#0x53)</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100054d8</span> <span class="p">(</span><span class="n">movs</span> <span class="n">r1</span><span class="p">,</span><span class="c1">#0x0)</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100054da</span> <span class="p">(</span><span class="n">ldr</span> <span class="n">r0</span><span class="p">,[</span><span class="mh">0x10005570</span><span class="p">])</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x100054dc</span> <span class="p">(</span><span class="n">bl</span> <span class="mh">0x10004340</span><span class="p">)</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x10004340</span> <span class="p">(</span><span class="n">ldr</span> <span class="n">r3</span><span class="p">,[</span><span class="mh">0x10004348</span><span class="p">])</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x10004342</span> <span class="p">(</span><span class="n">ldr</span> <span class="n">r3</span><span class="p">,[</span><span class="n">r3</span><span class="p">,</span><span class="c1">#0x0])</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x10004344</span> <span class="p">(</span><span class="n">bx</span> <span class="n">r3</span><span class="p">)</span>
+<span class="n">Address</span><span class="p">:</span> <span class="mh">0x0000534c</span> <span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+<span class="n">emulate_rp2040</span><span class="o">.</span><span class="n">py</span><span class="o">&gt;</span> <span class="n">Emulation</span> <span class="n">Error</span><span class="p">:</span> <span class="s1">&#39;Instruction decode failed (Bytes do not form a legal instruction.), PC=0000534c&#39;</span>
+</pre></div>
+</div>
+<p>By analysing the decompiled binary I could see that the following function calls were made before the error happened: main() &gt; stdio_init_all() &gt; stdio_usb_init() &gt; tusb_init() &gt; tud_init() &gt; __wrap_memset(void)</p>
+<p>The __wrap_memset(void) function decompiles to this:</p>
+<div class="highlight-C notranslate"><div class="highlight"><pre><span></span><span class="kt">_Bool</span><span class="w"> </span><span class="nf">tud_init</span><span class="p">(</span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">rhport</span><span class="p">)</span>
+
+<span class="p">{</span>
+<span class="w">    </span><span class="p">...</span>
+<span class="w">    </span><span class="n">__wrap_memset</span><span class="p">(</span><span class="o">&amp;</span><span class="n">_usbd_dev</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mh">0x53</span><span class="p">);</span>
+<span class="w">    </span><span class="p">...</span>
+<span class="p">}</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">__wrap_memset</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+
+<span class="p">{</span>
+<span class="w">                    </span><span class="cm">/* WARNING: Treating indirect jump as call */</span>
+<span class="w">    </span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="n">code</span><span class="w"> </span><span class="o">*</span><span class="p">)</span><span class="mh">0x534d</span><span class="p">)();</span>
+<span class="w">    </span><span class="k">return</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The emulator is unable to find valid instructions at address 0x534d and therefore throws an error. It looks like the __wrap_memset() function should be setting 83 bytes of memory to 0 at the address of _usb_dev, however this does not appear to be what the __wrap_memset is actually doing. Looking at the Ghidra decompilation, we can see that _usbd_dev has an address -f 0x2000097C.</p>
+</section>
+<section id="creating-a-memory-map">
+<h2>Creating A Memory Map<a class="headerlink" href="#creating-a-memory-map" title="Permalink to this heading">¶</a></h2>
+<p>One way to improve the emulation accuracy is to give the emulator a representative map of the memory as present on the device. To do this, follow the steps in the link below to get a GDB link running using a pico debug probe:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://www.raspberrypi.com/documentation/microcontrollers/debug-probe.html">Pico Debug Probe</a></p></li>
+</ul>
+<p>Next, run the following commands to dump the contents of the relevant sections of memory to binary files.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="n">gdb</span><span class="p">)</span> <span class="n">dump</span> <span class="n">binary</span> <span class="n">memory</span> <span class="n">pico_rom</span><span class="o">.</span><span class="n">bin</span> <span class="mh">0x00000000</span> <span class="mh">0x00004000</span>
+<span class="p">(</span><span class="n">gdb</span><span class="p">)</span> <span class="n">dump</span> <span class="n">binary</span> <span class="n">memory</span> <span class="n">pico_xip</span><span class="o">.</span><span class="n">bin</span> <span class="mh">0x10000000</span> <span class="mh">0x11000000</span>
+<span class="p">(</span><span class="n">gdb</span><span class="p">)</span> <span class="n">dump</span> <span class="n">binary</span> <span class="n">memory</span> <span class="n">pico_sram_0_5</span><span class="o">.</span><span class="n">bin</span> <span class="mh">0x20000000</span> <span class="mh">0x20042000</span>
+<span class="p">(</span><span class="n">gdb</span><span class="p">)</span> <span class="n">dump</span> <span class="n">binary</span> <span class="n">memory</span> <span class="n">pico_peripherals</span><span class="o">.</span><span class="n">bin</span> <span class="mh">0x40000000</span> <span class="mh">0x40080000</span>
+<span class="p">(</span><span class="n">gdb</span><span class="p">)</span> <span class="n">dump</span> <span class="n">binary</span> <span class="n">memory</span> <span class="n">pico_sram_alias</span><span class="o">.</span><span class="n">bin</span> <span class="mh">0x21000000</span> <span class="mh">0x21040000</span>
+<span class="p">(</span><span class="n">gdb</span><span class="p">)</span> <span class="n">dump</span> <span class="n">binary</span> <span class="n">memory</span> <span class="n">pico_dma</span><span class="o">.</span><span class="n">bin</span> <span class="mh">0x50000000</span> <span class="mh">0x50100000</span>
+<span class="p">(</span><span class="n">gdb</span><span class="p">)</span> <span class="n">dump</span> <span class="n">binary</span> <span class="n">memory</span> <span class="n">pico_usb</span><span class="o">.</span><span class="n">bin</span> <span class="mh">0x50100000</span> <span class="mh">0x50200000</span>
+<span class="p">(</span><span class="n">gdb</span><span class="p">)</span> <span class="n">dump</span> <span class="n">binary</span> <span class="n">memory</span> <span class="n">pico_ahb_lite</span><span class="o">.</span><span class="n">bin</span> <span class="mh">0x50200000</span> <span class="mh">0x50500000</span>
+<span class="p">(</span><span class="n">gdb</span><span class="p">)</span> <span class="n">dump</span> <span class="n">binary</span> <span class="n">memory</span> <span class="n">pico_sio</span><span class="o">.</span><span class="n">bin</span> <span class="mh">0xd0000000</span> <span class="mh">0xd000017c</span>
+<span class="p">(</span><span class="n">gdb</span><span class="p">)</span> <span class="n">dump</span> <span class="n">binary</span> <span class="n">memory</span> <span class="n">pico_ppb</span><span class="o">.</span><span class="n">bin</span> <span class="mh">0xe0000000</span> <span class="mh">0xe0100000</span>
+</pre></div>
+</div>
+<p>These can then be loaded into memory before the Ghidra script starts emulation. Add the following before the for loop in the main function of the emulation script:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nb">dir</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">askDirectory</span><span class="p">(</span><span class="s2">&quot;Select Memory Directory&quot;</span><span class="p">,</span> <span class="s2">&quot;OK&quot;</span><span class="p">))</span><span class="o">+</span><span class="s2">&quot;/&quot;</span>
+
+<span class="c1"># Map memory</span>
+<span class="n">ROM</span>  <span class="o">=</span> <span class="n">read_memory</span><span class="p">(</span><span class="nb">dir</span><span class="o">+</span><span class="s2">&quot;pico_rom.bin&quot;</span><span class="p">)</span>
+<span class="n">XIP</span>  <span class="o">=</span> <span class="n">read_memory</span><span class="p">(</span><span class="nb">dir</span><span class="o">+</span><span class="s2">&quot;pico_xip.bin&quot;</span><span class="p">)</span>
+<span class="n">SRAM</span> <span class="o">=</span> <span class="n">read_memory</span><span class="p">(</span><span class="nb">dir</span><span class="o">+</span><span class="s2">&quot;pico_sram_0_5.bin&quot;</span><span class="p">)</span>
+<span class="n">SRAM_AL</span> <span class="o">=</span> <span class="n">read_memory</span><span class="p">(</span><span class="nb">dir</span><span class="o">+</span><span class="s2">&quot;pico_sram_alias.bin&quot;</span><span class="p">)</span>
+<span class="n">AHB_LITE</span> <span class="o">=</span> <span class="n">read_memory</span><span class="p">(</span><span class="nb">dir</span><span class="o">+</span><span class="s2">&quot;pico_ahb_lite.bin&quot;</span><span class="p">)</span>
+<span class="n">DMA</span> <span class="o">=</span> <span class="n">read_memory</span><span class="p">(</span><span class="nb">dir</span><span class="o">+</span><span class="s2">&quot;pico_dma.bin&quot;</span><span class="p">)</span>
+<span class="n">PERIPH</span> <span class="o">=</span> <span class="n">read_memory</span><span class="p">(</span><span class="nb">dir</span><span class="o">+</span><span class="s2">&quot;pico_peripherals.bin&quot;</span><span class="p">)</span>
+<span class="n">PPB</span> <span class="o">=</span> <span class="n">read_memory</span><span class="p">(</span><span class="nb">dir</span><span class="o">+</span><span class="s2">&quot;pico_ppb.bin&quot;</span><span class="p">)</span>
+<span class="n">SIO</span> <span class="o">=</span> <span class="n">read_memory</span><span class="p">(</span><span class="nb">dir</span><span class="o">+</span><span class="s2">&quot;pico_sio.bin&quot;</span><span class="p">)</span>
+<span class="n">USB</span> <span class="o">=</span> <span class="n">read_memory</span><span class="p">(</span><span class="nb">dir</span><span class="o">+</span><span class="s2">&quot;pico_usb.bin&quot;</span><span class="p">)</span>
+
+<span class="n">currentProgramMemory</span> <span class="o">=</span> <span class="n">emuHelper</span><span class="o">.</span><span class="n">readMemory</span><span class="p">(</span><span class="n">getAddress</span><span class="p">(</span><span class="mh">0x10000000</span><span class="p">),</span> <span class="mh">0x01000000</span><span class="p">)</span>
+
+
+<span class="c1"># Write Memory</span>
+<span class="n">emuHelper</span><span class="o">.</span><span class="n">writeMemory</span><span class="p">(</span><span class="n">getAddress</span><span class="p">(</span><span class="mh">0x00000000</span><span class="p">),</span> <span class="n">ROM</span><span class="p">)</span>
+<span class="n">emuHelper</span><span class="o">.</span><span class="n">writeMemory</span><span class="p">(</span><span class="n">getAddress</span><span class="p">(</span><span class="mh">0x12000000</span><span class="p">),</span> <span class="n">currentProgramMemory</span><span class="p">)</span>
+<span class="n">emuHelper</span><span class="o">.</span><span class="n">writeMemory</span><span class="p">(</span><span class="n">getAddress</span><span class="p">(</span><span class="mh">0x13000000</span><span class="p">),</span> <span class="n">currentProgramMemory</span><span class="p">)</span>
+<span class="n">emuHelper</span><span class="o">.</span><span class="n">writeMemory</span><span class="p">(</span><span class="n">getAddress</span><span class="p">(</span><span class="mh">0x14000000</span><span class="p">),</span> <span class="n">currentProgramMemory</span><span class="p">)</span>
+<span class="n">emuHelper</span><span class="o">.</span><span class="n">writeMemory</span><span class="p">(</span><span class="n">getAddress</span><span class="p">(</span><span class="mh">0x18000000</span><span class="p">),</span> <span class="n">currentProgramMemory</span><span class="p">)</span>
+<span class="n">emuHelper</span><span class="o">.</span><span class="n">writeMemory</span><span class="p">(</span><span class="n">getAddress</span><span class="p">(</span><span class="mh">0x20000000</span><span class="p">),</span> <span class="n">SRAM</span><span class="p">)</span>
+<span class="n">emuHelper</span><span class="o">.</span><span class="n">writeMemory</span><span class="p">(</span><span class="n">getAddress</span><span class="p">(</span><span class="mh">0x21000000</span><span class="p">),</span> <span class="n">SRAM_AL</span><span class="p">)</span>
+<span class="n">emuHelper</span><span class="o">.</span><span class="n">writeMemory</span><span class="p">(</span><span class="n">getAddress</span><span class="p">(</span><span class="mh">0x40000000</span><span class="p">),</span> <span class="n">PERIPH</span><span class="p">)</span>
+<span class="n">emuHelper</span><span class="o">.</span><span class="n">writeMemory</span><span class="p">(</span><span class="n">getAddress</span><span class="p">(</span><span class="mh">0x50000000</span><span class="p">),</span> <span class="n">DMA</span><span class="p">)</span>
+<span class="n">emuHelper</span><span class="o">.</span><span class="n">writeMemory</span><span class="p">(</span><span class="n">getAddress</span><span class="p">(</span><span class="mh">0x50100000</span><span class="p">),</span> <span class="n">USB</span><span class="p">)</span>
+<span class="n">emuHelper</span><span class="o">.</span><span class="n">writeMemory</span><span class="p">(</span><span class="n">getAddress</span><span class="p">(</span><span class="mh">0x50200000</span><span class="p">),</span> <span class="n">AHB_LITE</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This will allow the emulation to get much futher, however the error “Unimplemented CALLOTHER pcodeop (DataMemoryBarrier), PC=10001d40” will be encountered once the emulator tries to execute the dmb (DataMemoryBarrier) instruction.</p>
+</section>
+<section id="skipping-sections-of-code">
+<h2>Skipping Sections of Code<a class="headerlink" href="#skipping-sections-of-code" title="Permalink to this heading">¶</a></h2>
+<p>To get around the error we can tell Ghidra to skip certain parts of the executable. Append the following before the for loop in the emulation script:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Set up list of known-error addresses</span>
+<span class="n">err_addr</span>  <span class="o">=</span> <span class="p">[</span><span class="mh">0x10001d40</span><span class="p">,</span> <span class="mh">0x10000384</span><span class="p">,</span> <span class="mh">0x100003d4</span><span class="p">]</span>
+<span class="n">skip_addr</span> <span class="o">=</span> <span class="p">[</span><span class="mh">0x10001d44</span><span class="p">,</span> <span class="mh">0x100003c8</span><span class="p">,</span> <span class="mh">0x100003d8</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>And alter the loop to look like this:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Emulation starting at 0x</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mainFunctionEntry</span><span class="p">))</span>
+<span class="k">while</span> <span class="n">monitor</span><span class="o">.</span><span class="n">isCancelled</span><span class="p">()</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+
+    <span class="n">executionAddress</span> <span class="o">=</span> <span class="n">emuHelper</span><span class="o">.</span><span class="n">getExecutionAddress</span><span class="p">()</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">executionAddress</span> <span class="o">==</span> <span class="n">controlledReturnAddr</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Emulation complete.&quot;</span><span class="p">)</span>
+        <span class="k">return</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Address: 0x</span><span class="si">{}</span><span class="s2"> (</span><span class="si">{}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">executionAddress</span><span class="p">,</span> <span class="n">getInstructionAt</span><span class="p">(</span><span class="n">executionAddress</span><span class="p">)))</span>
+
+    <span class="c1"># single step emulation</span>
+    <span class="n">success</span> <span class="o">=</span> <span class="n">emuHelper</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">monitor</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">success</span> <span class="o">==</span> <span class="kc">False</span><span class="p">):</span>
+        <span class="n">lastError</span> <span class="o">=</span> <span class="n">emuHelper</span><span class="o">.</span><span class="n">getLastError</span><span class="p">()</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">executionAddress</span><span class="o">.</span><span class="n">offset</span> <span class="ow">in</span> <span class="n">err_addr</span><span class="p">):</span>
+            <span class="n">emuHelper</span><span class="o">.</span><span class="n">writeRegister</span><span class="p">(</span><span class="n">emuHelper</span><span class="o">.</span><span class="n">getPCRegister</span><span class="p">(),</span> <span class="n">skip_addr</span><span class="p">[</span><span class="n">err_addr</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">executionAddress</span><span class="o">.</span><span class="n">offset</span><span class="p">)])</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: &#39;</span><span class="si">{}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">lastError</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">printerr</span><span class="p">(</span><span class="s2">&quot;Emulation Error: &#39;</span><span class="si">{}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">lastError</span><span class="p">))</span>
+            <span class="k">return</span>
+
+<span class="n">emuHelper</span><span class="o">.</span><span class="n">dispose</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Whenever the emulator tries to execute an instruction storred in err_addr it will print a warning and skip to the instruction pointed to by skip_addr.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">Sam G Notes</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../linux_gaming.html">Linux Gaming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../embedded_notes.html">Embedded Notes</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2023, Sam G.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 6.1.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="../_sources/rp2040/emulating_rp2040.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

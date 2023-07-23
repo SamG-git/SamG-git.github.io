@@ -1,0 +1,281 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>Coding &amp; Debugging RP2040 using Eclipse &#8212; Sam G Notes  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Emulating the RP2040 with Ghidra" href="emulating_rp2040.html" />
+    <link rel="prev" title="RP2040 Notes" href="rp2040_notes.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="coding-debugging-rp2040-using-eclipse">
+<h1>Coding &amp; Debugging RP2040 using Eclipse<a class="headerlink" href="#coding-debugging-rp2040-using-eclipse" title="Permalink to this heading">¶</a></h1>
+<p>For the following tutorial to work, ensure that Eclipse is installed for Embedded C/C++ systems.</p>
+<section id="creating-the-project-structure">
+<h2>Creating the Project Structure<a class="headerlink" href="#creating-the-project-structure" title="Permalink to this heading">¶</a></h2>
+<ol class="arabic simple">
+<li><p>Create a new directory for the project to live in, with a <code class="docutils literal notranslate"><span class="pre">build`</span></code> and <code class="docutils literal notranslate"><span class="pre">src</span></code> subdirectory.</p></li>
+<li><p>In the project’s root directory, create a file called <code class="docutils literal notranslate"><span class="pre">CMakeLists.txt</span></code> with the following contents:</p></li>
+</ol>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">cmake_minimum_required</span><span class="p">(</span><span class="n">VERSION</span> <span class="mf">3.12</span><span class="p">)</span>
+
+<span class="c1"># Change your executable name to something creative!</span>
+<span class="nb">set</span><span class="p">(</span><span class="n">NAME</span> <span class="n">pico_asm</span><span class="p">)</span> <span class="c1"># &lt;-- Name your project/executable here!</span>
+
+<span class="n">include</span><span class="p">(</span><span class="n">pico_sdk_import</span><span class="o">.</span><span class="n">cmake</span><span class="p">)</span>
+
+<span class="n">project</span><span class="p">(</span><span class="n">pico_asm</span>
+        <span class="n">LANGUAGES</span> <span class="n">C</span> <span class="n">CXX</span> <span class="n">ASM</span>
+        <span class="n">DESCRIPTION</span> <span class="s2">&quot;Basic RP2040 Assembly Application&quot;</span><span class="p">)</span>
+<span class="nb">set</span><span class="p">(</span><span class="n">CMAKE_C_STANDARD</span> <span class="mi">11</span><span class="p">)</span>
+<span class="nb">set</span><span class="p">(</span><span class="n">CMAKE_CXX_STANDARD</span> <span class="mi">17</span><span class="p">)</span>
+
+<span class="c1"># Initialize the SDK</span>
+<span class="n">pico_sdk_init</span><span class="p">()</span>
+
+<span class="c1"># Add your source files</span>
+<span class="n">add_subdirectory</span><span class="p">(</span><span class="s2">&quot;src/&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="3">
+<li><p>In the project’s root directory, create a file called <code class="docutils literal notranslate"><span class="pre">pico_sdk_import.cmake</span></code> with the following contents:</p></li>
+</ol>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span># This is a copy of &lt;PICO_SDK_PATH&gt;/external/pico_sdk_import.cmake
+
+# This can be dropped into an external project to help locate this SDK
+# It should be include()ed prior to project()
+
+if (DEFINED ENV{PICO_SDK_PATH} AND (NOT PICO_SDK_PATH))
+    set(PICO_SDK_PATH $ENV{PICO_SDK_PATH})
+    message(&quot;Using PICO_SDK_PATH from environment (&#39;${PICO_SDK_PATH}&#39;)&quot;)
+endif ()
+
+if (DEFINED ENV{PICO_SDK_FETCH_FROM_GIT} AND (NOT PICO_SDK_FETCH_FROM_GIT))
+    set(PICO_SDK_FETCH_FROM_GIT $ENV{PICO_SDK_FETCH_FROM_GIT})
+    message(&quot;Using PICO_SDK_FETCH_FROM_GIT from environment (&#39;${PICO_SDK_FETCH_FROM_GIT}&#39;)&quot;)
+endif ()
+
+if (DEFINED ENV{PICO_SDK_FETCH_FROM_GIT_PATH} AND (NOT PICO_SDK_FETCH_FROM_GIT_PATH))
+    set(PICO_SDK_FETCH_FROM_GIT_PATH $ENV{PICO_SDK_FETCH_FROM_GIT_PATH})
+    message(&quot;Using PICO_SDK_FETCH_FROM_GIT_PATH from environment (&#39;${PICO_SDK_FETCH_FROM_GIT_PATH}&#39;)&quot;)
+endif ()
+
+set(PICO_SDK_PATH &quot;${PICO_SDK_PATH}&quot; CACHE PATH &quot;Path to the PICO SDK&quot;)
+set(PICO_SDK_FETCH_FROM_GIT &quot;${PICO_SDK_FETCH_FROM_GIT}&quot; CACHE BOOL &quot;Set to ON to fetch copy of PICO SDK from git if not otherwise locatable&quot;)
+set(PICO_SDK_FETCH_FROM_GIT_PATH &quot;${PICO_SDK_FETCH_FROM_GIT_PATH}&quot; CACHE FILEPATH &quot;location to download SDK&quot;)
+
+if (NOT PICO_SDK_PATH)
+    if (PICO_SDK_FETCH_FROM_GIT)
+        include(FetchContent)
+        set(FETCHCONTENT_BASE_DIR_SAVE ${FETCHCONTENT_BASE_DIR})
+        if (PICO_SDK_FETCH_FROM_GIT_PATH)
+            get_filename_component(FETCHCONTENT_BASE_DIR &quot;${PICO_SDK_FETCH_FROM_GIT_PATH}&quot; REALPATH BASE_DIR &quot;${CMAKE_SOURCE_DIR}&quot;)
+        endif ()
+        FetchContent_Declare(
+                pico_sdk
+                GIT_REPOSITORY https://github.com/raspberrypi/pico-sdk
+                GIT_TAG master
+        )
+        if (NOT pico_sdk)
+            message(&quot;Downloading PICO SDK&quot;)
+            FetchContent_Populate(pico_sdk)
+            set(PICO_SDK_PATH ${pico_sdk_SOURCE_DIR})
+        endif ()
+        set(FETCHCONTENT_BASE_DIR ${FETCHCONTENT_BASE_DIR_SAVE})
+    else ()
+        message(FATAL_ERROR
+                &quot;PICO SDK location was not specified. Please set PICO_SDK_PATH or set PICO_SDK_FETCH_FROM_GIT to on to fetch from git.&quot;
+                )
+    endif ()
+endif ()
+
+get_filename_component(PICO_SDK_PATH &quot;${PICO_SDK_PATH}&quot; REALPATH BASE_DIR &quot;${CMAKE_BINARY_DIR}&quot;)
+if (NOT EXISTS ${PICO_SDK_PATH})
+    message(FATAL_ERROR &quot;Directory &#39;${PICO_SDK_PATH}&#39; not found&quot;)
+endif ()
+
+set(PICO_SDK_INIT_CMAKE_FILE ${PICO_SDK_PATH}/pico_sdk_init.cmake)
+if (NOT EXISTS ${PICO_SDK_INIT_CMAKE_FILE})
+    message(FATAL_ERROR &quot;Directory &#39;${PICO_SDK_PATH}&#39; does not appear to contain the PICO SDK&quot;)
+endif ()
+
+set(PICO_SDK_PATH ${PICO_SDK_PATH} CACHE PATH &quot;Path to the PICO SDK&quot; FORCE)
+
+include(${PICO_SDK_INIT_CMAKE_FILE})
+</pre></div>
+</div>
+<ol class="arabic simple" start="4">
+<li><p>In the <code class="docutils literal notranslate"><span class="pre">src</span></code> directory, create a file called <code class="docutils literal notranslate"><span class="pre">CMakeLists.txt</span></code> with the following contents:</p></li>
+</ol>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>cmake_minimum_required(VERSION 3.14)
+
+# Include app source code file(s)
+add_executable(${NAME}
+    ${CMAKE_SOURCE_DIR}/src/main.S
+        ${CMAKE_SOURCE_DIR}/src/sdk_inlines.c
+)
+
+# Link to built libraries
+target_link_libraries(${NAME} LINK_PUBLIC
+                    pico_stdlib
+                    hardware_gpio
+)
+
+# Enable/disable STDIO via USB and UART
+pico_enable_stdio_usb(${NAME} 1)
+pico_enable_stdio_uart(${NAME} 1)
+
+# Enable extra build products
+pico_add_extra_outputs(${NAME})
+</pre></div>
+</div>
+<ol class="arabic simple" start="5">
+<li><p>Populate the source files in the <code class="docutils literal notranslate"><span class="pre">src</span></code> directory, altering the associated file names in the <code class="docutils literal notranslate"><span class="pre">CMakeLists.txt</span></code> file.</p></li>
+<li><p>Change into the <code class="docutils literal notranslate"><span class="pre">build</span></code> directory and run the command <code class="docutils literal notranslate"><span class="pre">cmake</span> <span class="pre">-G&quot;Eclipse</span> <span class="pre">CDT4</span> <span class="pre">-</span> <span class="pre">Unix</span> <span class="pre">Makefiles&quot;</span> <span class="pre">-DCMAKE_BUILD_TYPE=Debug</span> <span class="pre">.</span></code>.</p></li>
+</ol>
+</section>
+<section id="configuring-the-project-in-eclipse">
+<h2>Configuring the Project in Eclipse<a class="headerlink" href="#configuring-the-project-in-eclipse" title="Permalink to this heading">¶</a></h2>
+<ol class="arabic simple">
+<li><p>In Eclipse, right click on the Project Explorer section and select New -&gt; Project. This will open the new project wizard.</p></li>
+</ol>
+<a class="reference internal image-reference" href="../_images/EclipseProjectWizard.png"><img alt="Eclipse project wizard" src="../_images/EclipseProjectWizard.png" style="width: 400px;" /></a>
+<ol class="arabic simple" start="2">
+<li><p>In the wizard, select the “Makefile Project with Existing Code” option under “C/C++” before clicking “Next”.</p></li>
+<li><p>In the next window, enter the path to your project in “Existing Code Location” and leave everything else as default.</p></li>
+</ol>
+<a class="reference internal image-reference" href="../_images/EclipseImportCode.png"><img alt="Eclipse Import Existing Code window" src="../_images/EclipseImportCode.png" style="width: 400px;" /></a>
+<ol class="arabic simple" start="4">
+<li><p>You will now have a new project in the “Project Explorer” panel. To configure builds correctly, right click on your project and select properties.</p></li>
+</ol>
+<a class="reference internal image-reference" href="../_images/EclipseProjectSettings.png"><img alt="Eclipse project properties window" src="../_images/EclipseProjectSettings.png" style="width: 400px;" /></a>
+<ol class="arabic simple" start="5">
+<li><p>Under the “C/C++” build section, append <code class="docutils literal notranslate"><span class="pre">/build/</span></code> to the “Build directory” path.</p></li>
+</ol>
+<p>Eclipse can now build your RP2040 project correctly.</p>
+</section>
+<section id="debugging-rp2040-in-eclipse">
+<h2>Debugging RP2040 in Eclipse<a class="headerlink" href="#debugging-rp2040-in-eclipse" title="Permalink to this heading">¶</a></h2>
+<p>By default Eclipse will try to debug programs using GDB on the host system. This will clearly not work for the RP2040, so some configuration changes are required. Before following these instructions, ensure that the openocd plugin for Eclipse is installed. This is installed by default on modern embedded C/C++ versions of Eclipse.</p>
+<ol class="arabic simple">
+<li><p>Right click on your project and select “Debug As” followed by “Debug Configurations”.</p></li>
+</ol>
+<a class="reference internal image-reference" href="../_images/DebugConfigurations.png"><img alt="Eclipse debug properties window" src="../_images/DebugConfigurations.png" style="width: 400px;" /></a>
+<ol class="arabic simple" start="2">
+<li><p>Select the “GDB OpenOCD Debugging” section.</p></li>
+<li><p>In the “main” tab, enter the path to the .ELF file you want to debug.</p></li>
+<li><p>In the “Debugger” tab, change the openocd executable path to the one installed in your PicoSDR (in these examples the pico SDK is installed in <code class="docutils literal notranslate"><span class="pre">/opt/Raspberry/pico</span></code>)</p></li>
+<li><p>Add the following to the OpenOCD options section: <code class="docutils literal notranslate"><span class="pre">-f</span> <span class="pre">/opt/Raspberry/pico/openocd/tcl/interface/cmsis-dap.cfg</span> <span class="pre">-f</span> <span class="pre">/opt/Raspberry/pico/openocd/tcl/target/rp2040.cfg</span> <span class="pre">-s</span> <span class="pre">/opt/Raspberry/pico/openocd/tcl/</span> <span class="pre">-c</span> <span class="pre">&quot;adapter</span> <span class="pre">speed</span> <span class="pre">5000&quot;</span></code>. Make sure to amend these paths to point to the equivalent directories on your system.</p></li>
+<li><p>Change the GDB executable name to <code class="docutils literal notranslate"><span class="pre">/bin/gdb-multiarch</span></code></p></li>
+</ol>
+<a class="reference internal image-reference" href="../_images/DebuggerTab.png"><img alt="Eclipse debugger tab" src="../_images/DebuggerTab.png" style="width: 400px;" /></a>
+<ol class="arabic simple" start="7">
+<li><p>In the “SVD Path” tab, change the file path to <code class="docutils literal notranslate"><span class="pre">/opt/Raspberry/pico/pico-sdk/src/rp2040/hardware_regs/rp2040.svd</span></code>, making sure to amend this to your pico-sdk path.</p></li>
+</ol>
+<a class="reference internal image-reference" href="../_images/SVDTab.png"><img alt="Eclipse SVD path tab" src="../_images/SVDTab.png" style="width: 400px;" /></a>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">Sam G Notes</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../linux_gaming.html">Linux Gaming</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../embedded_notes.html">Embedded Notes</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="rp2040_notes.html">RP2040 Notes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../basic_unit_test_library.html">Basic Unit Test Library</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../msp430/msp430_notes.html">MSP430 Notes</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="../embedded_notes.html">Embedded Notes</a><ul>
+  <li><a href="rp2040_notes.html">RP2040 Notes</a><ul>
+      <li>Previous: <a href="rp2040_notes.html" title="previous chapter">RP2040 Notes</a></li>
+      <li>Next: <a href="emulating_rp2040.html" title="next chapter">Emulating the RP2040 with Ghidra</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2023, Sam G.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 6.1.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="../_sources/rp2040/rp2040_eclipse.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
