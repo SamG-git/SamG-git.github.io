@@ -96,13 +96,56 @@ Allocate a custom object:
 The above would create the following console output
 
 .. code-block:: 
-    
+
     Object Created
     4
     Object Destroyed
 
 Unique pointers are the best way of replacing the standard ``malloc`` or ``new``, and is supported by all modern C++ versions.
 
+Using Unique Pointers
+~~~~~~~~~~~~~~~~~~~~~
 
+Unique pointers do not act like regular pointers when passing them to other functions. However, they support the same in-line operations as objects the hold. The following shows an example of how to use unique pointers:
 
+.. code-block:: c++
+    
+    #include <iostream>
+    #include <memory>
 
+    class MyObject{
+        public:
+            int val;
+
+            MyObject(int _val){
+                val = _val;
+                std::cout << "Object Created" << std::endl;
+            }
+
+            ~MyObject(){
+                std::cout << val << std::endl;
+                std::cout << "Object Destroyed" << std::endl;
+            }
+    };
+
+    void PrintObject(MyObject *obj){
+        std::cout << obj->val << std::endl;
+    }
+
+    int main(){
+        std::unique_ptr<MyObject> p(new MyObject(4));
+        /* Print the MyObject value */
+        PrintObject(p.get());
+        /* Change the MyObject value */
+        p->val = 5;
+        return 0;	
+    }
+
+This will return the following:
+
+.. code-block::
+
+    Object Created
+    4
+    5
+    Object Destroyed
