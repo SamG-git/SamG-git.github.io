@@ -9,38 +9,40 @@ First, we create a file called ``lazy_memory.h`` which contains out ``malloc`` w
 
     #include <stdlib.h>
 
-    struct memory {
+    typedef struct __memory__ {
         void * ptr;
-        struct memory * next;
-    };
+        struct __memory__ * next;
+    } __memory__;
 
-    static struct memory *mem = NULL;
-    static struct memory *start = NULL;
+    static __memory__ *mem = NULL;
+    static __memory__ *start = NULL;
 
     void * lmalloc(size_t size){
         if(mem == NULL){
-            mem = malloc(sizeof(struct memory));
+            mem = malloc(sizeof(__memory__));
             start = mem;
         } else {
-            mem->next = malloc(sizeof(struct memory));
+            mem->next = malloc(sizeof(__memory__));
             mem = mem->next;
         }
 
         mem->ptr = malloc(size);
         mem->next = NULL;
+        return mem->ptr;
     }
 
     void free_all(){
         if(start == NULL) return;
-        
+
         do {
-            struct memory * tmp = start->next;
+            __memory__ * tmp = start->next;
             free(start->ptr);
             free(start);
             start = tmp;
         } while(start != NULL);
 
     }
+
 
 To test this, lets create a simply ``main.c`` file with the following contents:
 
@@ -53,7 +55,7 @@ To test this, lets create a simply ``main.c`` file with the following contents:
     int main(){
         for(int i = 0; i < 10; i++){
             int * mem = (int*) lmalloc(sizeof(int) * i);
-            printf("%04x\n", (unsigned int) mem);
+            printf("%04lx\n", (unsigned long int) mem);
         }
 
         free_all();
