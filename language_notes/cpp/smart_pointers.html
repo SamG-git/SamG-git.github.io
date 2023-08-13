@@ -1,0 +1,207 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>Smart Pointers &#8212; Sam G Notes  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css" />
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="prev" title="C++ Notes" href="cpp.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="smart-pointers">
+<h1>Smart Pointers<a class="headerlink" href="#smart-pointers" title="Permalink to this heading">¶</a></h1>
+<p>In C++, a smart pointer is a way of correctly dealing with the memory management issues that can occur when using <code class="docutils literal notranslate"><span class="pre">malloc</span></code> or <code class="docutils literal notranslate"><span class="pre">new</span></code>. On initialization, smart points will allocate the requested amount of memory, and on destruction they will automatically free that memory. A basic smart pointer is shown in the example below:</p>
+<div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="k">template</span><span class="w"> </span><span class="o">&lt;</span><span class="k">class</span><span class="w"> </span><span class="nc">TYPE</span><span class="o">&gt;</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">SmartPointer</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">public</span><span class="o">:</span>
+<span class="w">    </span><span class="n">TYPE</span><span class="w"> </span><span class="o">*</span><span class="n">ptr</span><span class="p">;</span>
+
+<span class="w">    </span><span class="n">SmartPointer</span><span class="p">(</span><span class="kt">size_t</span><span class="w"> </span><span class="n">size</span><span class="p">){</span>
+<span class="w">        </span><span class="n">ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">TYPE</span><span class="p">[</span><span class="n">size</span><span class="p">];</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="o">~</span><span class="n">SmartPointer</span><span class="p">(){</span>
+<span class="w">        </span><span class="k">delete</span><span class="w"> </span><span class="n">ptr</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+<p>Using the method above you have to access the raw pointer using the <code class="docutils literal notranslate"><span class="pre">smart_pointer.ptr</span></code> method. This can be improved using the example shown below:</p>
+<div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="k">template</span><span class="w"> </span><span class="o">&lt;</span><span class="k">class</span><span class="w"> </span><span class="nc">TYPE</span><span class="o">&gt;</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">SmartPtr</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">TYPE</span><span class="w"> </span><span class="o">*</span><span class="n">ptr</span><span class="p">;</span><span class="w"> </span><span class="c1">// Actual pointer</span>
+<span class="k">public</span><span class="o">:</span>
+<span class="w">    </span><span class="k">explicit</span><span class="w"> </span><span class="n">SmartPtr</span><span class="p">(</span><span class="n">TYPE</span><span class="o">*</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">NULL</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">p</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// Destructor</span>
+<span class="w">    </span><span class="o">~</span><span class="n">SmartPtr</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">delete</span><span class="w"> </span><span class="p">(</span><span class="n">ptr</span><span class="p">);</span><span class="w"> </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// Overloading dereferencing operator</span>
+<span class="w">    </span><span class="n">TYPE</span><span class="o">&amp;</span><span class="w"> </span><span class="k">operator</span><span class="o">*</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="o">*</span><span class="n">ptr</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+<p>However, we shouldn’t be rolling our own smart pointer as the <code class="docutils literal notranslate"><span class="pre">memory</span></code> library provides us with more fully featured smart pointer options as part of the C++ standard.</p>
+<section id="unique-pointers">
+<h2>Unique Pointers<a class="headerlink" href="#unique-pointers" title="Permalink to this heading">¶</a></h2>
+<section id="description">
+<h3>Description<a class="headerlink" href="#description" title="Permalink to this heading">¶</a></h3>
+<p>Extract from the C++ documentation:</p>
+<blockquote>
+<div><p><code class="docutils literal notranslate"><span class="pre">std::unique_ptr</span></code> is a smart pointer that owns and manages another object through a pointer and disposes of that object when the unique_ptr goes out of scope.</p>
+<p>The object is disposed of, using the associated deleter when either of the following happens:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>the managing unique_ptr object is destroyed</p></li>
+<li><p>the managing unique_ptr object is assigned another pointer via <code class="docutils literal notranslate"><span class="pre">operator=</span></code> or <code class="docutils literal notranslate"><span class="pre">reset()</span></code>.</p></li>
+</ul>
+</div></blockquote>
+<p>The object is disposed of, using a potentially user-supplied deleter by calling <code class="docutils literal notranslate"><span class="pre">get_deleter()(ptr)</span></code>. The default deleter uses the delete operator, which destroys the object and deallocates the memory.</p>
+</div></blockquote>
+</section>
+<section id="allocation">
+<h3>Allocation<a class="headerlink" href="#allocation" title="Permalink to this heading">¶</a></h3>
+<p>Create a pointer to an integer:</p>
+<div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="w"> </span><span class="n">p</span><span class="p">(</span><span class="k">new</span><span class="w"> </span><span class="kt">int</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>Create a pointer to an array of ten integers:</p>
+<div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="w"> </span><span class="n">p</span><span class="p">(</span><span class="k">new</span><span class="w"> </span><span class="kt">int</span><span class="p">[</span><span class="mi">10</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>Allocate a custom object:</p>
+<div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">MyObject</span><span class="p">{</span>
+<span class="w">    </span><span class="k">public</span><span class="o">:</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">val</span><span class="p">;</span>
+
+<span class="w">    </span><span class="n">MyObject</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">_val</span><span class="p">){</span>
+<span class="w">        </span><span class="n">val</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">_val</span><span class="p">;</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;Object Created&quot;</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="o">~</span><span class="n">MyObject</span><span class="p">(){</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">val</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;Object Destroyed&quot;</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(){</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="n">MyObject</span><span class="o">&gt;</span><span class="w"> </span><span class="n">p</span><span class="p">(</span><span class="k">new</span><span class="w"> </span><span class="n">MyObject</span><span class="p">(</span><span class="mi">4</span><span class="p">));</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The above would create the following console output</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Object</span> <span class="n">Created</span>
+<span class="mi">4</span>
+<span class="n">Object</span> <span class="n">Destroyed</span>
+</pre></div>
+</div>
+<p>Unique pointers are the best way of replacing the standard <code class="docutils literal notranslate"><span class="pre">malloc</span></code> or <code class="docutils literal notranslate"><span class="pre">new</span></code>, and is supported by all modern C++ versions.</p>
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Sam G Notes</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../linux_gaming.html">Linux Gaming</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../embedded_notes.html">Embedded Notes</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../../rp2040/rp2040_notes.html">RP2040 Notes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../basic_unit_test_library.html">Basic Unit Test Library</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../msp430/msp430_notes.html">MSP430 Notes</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../language_notes.html">Programming Language Notes</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../../embedded_notes.html">Embedded Notes</a><ul>
+  <li><a href="../language_notes.html">Programming Language Notes</a><ul>
+  <li><a href="cpp.html">C++ Notes</a><ul>
+      <li>Previous: <a href="cpp.html" title="previous chapter">C++ Notes</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2023, Sam G.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 6.1.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="../../_sources/language_notes/cpp/smart_pointers.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
