@@ -1,0 +1,70 @@
+Lazy Memory Management
+======================
+
+In C there is no garbage collector and no smart pointers, you have to do your own memory management. This can lead to mistakes, which is why wrapping ``malloc`` can sometimes be useful to ensure no memory leaks occur. The following is an example of hwo this can be done, however it not thoroughly tested and *should not be used on production code*.
+
+First, we create a file called ``lazy_memory.h`` which contains out ``malloc`` wrapper. This contains a structure, two global variables and two functions. The ``lmalloc()`` function is what we will use instead of ``malloc``. It calls the ``stdlib.h`` ``malloc`` function and stores a copy of the pointer in a linked list. When it comes for the program to end, we call ``free_all()`` which goes through the linked list and de-allocates all the associated memory.
+
+.. code-block:: c 
+
+    #include <stdlib.h>
+
+    struct memory {
+        void * ptr;
+        struct memory * next;
+    };
+
+    static struct memory *mem = NULL;
+    static struct memory *start = NULL;
+
+    void * lmalloc(size_t size){
+        if(mem == NULL){
+            mem = malloc(sizeof(struct memory));
+            start = mem;
+        } else {
+            mem->next = malloc(sizeof(struct memory));
+            mem = mem->next;
+        }
+
+        mem->ptr = malloc(size);
+        mem->next = NULL;
+    }
+
+    void free_all(){
+        if(start == NULL) return;
+        
+        do {
+            struct memory * tmp = start->next;
+            free(start->ptr);
+            free(start);
+            start = tmp;
+        } while(start != NULL);
+
+    }
+
+To test this, lets create a simply ``main.c`` file with the following contents:
+
+.. code-block:: c 
+
+    #include <stdio.h>
+
+    #include "lazy_memory.h"
+
+    int main(){
+        for(int i = 0; i < 10; i++){
+            int * mem = (int*) lmalloc(sizeof(int) * i);
+            printf("%04x\n", (unsigned int) mem);
+        }
+
+        free_all();
+        return 0;
+    }
+
+We can then compile this code and check for any leaks using ``valgrind``. In this case, no memory leaks are detected.
+
+The following should be noted:
+
+    - ``free_all()`` does not check for any memory assigned using the standard ``malloc``.
+    - If any variable in the linked list is manually deallocated using ``free()`` then ``free_all()`` will fail. 
+    - ``lmalloc()`` does not check for or handle ``malloc`` returning ``NULL``.
+

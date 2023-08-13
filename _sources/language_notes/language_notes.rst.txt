@@ -5,3 +5,4 @@ Programming Language Notes
     :maxdepth: 2
 
     cpp/cpp
+    c/c
