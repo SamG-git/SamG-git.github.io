@@ -14,21 +14,45 @@ First, we create a file called ``lazy_memory.h`` which contains out ``malloc`` w
         struct __memory__ * next;
     } __memory__;
 
-    static __memory__ *mem = NULL;
+    static __memory__ *end = NULL;
     static __memory__ *start = NULL;
 
     void * lmalloc(size_t size){
-        if(mem == NULL){
-            mem = malloc(sizeof(__memory__));
-            start = mem;
+        if(end == NULL){
+            end = malloc(sizeof(__memory__));
+            start = end;
         } else {
-            mem->next = malloc(sizeof(__memory__));
-            mem = mem->next;
+            end->next = malloc(sizeof(__memory__));
+            end = end->next;
         }
 
-        mem->ptr = malloc(size);
-        mem->next = NULL;
-        return mem->ptr;
+        end->ptr = malloc(size);
+        end->next = NULL;
+        return end->ptr;
+    }
+
+    void lfree(void* ptr){
+        if((long) ptr == (long) start->ptr){
+            __memory__ *tmp_start = start->next;
+            free(start);
+            start = tmp_start;
+            goto free_mem;
+        }
+        
+        __memory__ * mem = start->next;
+        __memory__ * prev = start;
+        do {
+            if((long) ptr == (long) mem->ptr){
+                prev->next = mem->next;
+                free(mem);
+                break;
+            }
+            prev = mem;
+            mem = mem->next;
+        } while(mem != NULL);
+                
+    free_mem:
+        free(ptr);
     }
 
     void free_all(){
@@ -43,23 +67,39 @@ First, we create a file called ``lazy_memory.h`` which contains out ``malloc`` w
 
     }
 
-
 To test this, lets create a simply ``main.c`` file with the following contents:
 
 .. code-block:: c 
 
     #include <stdio.h>
-
     #include "lazy_memory.h"
 
     int main(){
+        void * ptrs[10];
         for(int i = 0; i < 10; i++){
-            int * mem = (int*) lmalloc(sizeof(int) * i);
-            printf("%04lx\n", (unsigned long int) mem);
+            ptrs[i] = lmalloc(i);
         }
 
+        for(int i = 0; i < 10; i++){
+            printf("%04lx ", (long) ptrs[i]);
+        }
+
+        printf("\n");
+
+        lfree(ptrs[0]);
+        lfree(ptrs[5]);
+        lfree(ptrs[9]);
+
+        printf("%04lx ", (long)ptrs[1]);
+        printf("%04lx ", (long)ptrs[2]);
+        printf("%04lx ", (long)ptrs[3]);
+        printf("%04lx ", (long)ptrs[4]);
+        printf("%04lx ", (long)ptrs[6]);
+        printf("%04lx ", (long)ptrs[7]);
+        printf("%04lx\n", (long)ptrs[8]);
+
         free_all();
-        return 0;
+        return 1;
     }
 
 We can then compile this code and check for any leaks using ``valgrind``. In this case, no memory leaks are detected.
@@ -69,4 +109,5 @@ The following should be noted:
     - ``free_all()`` does not check for any memory assigned using the standard ``malloc``.
     - If any variable in the linked list is manually deallocated using ``free()`` then ``free_all()`` will fail. 
     - ``lmalloc()`` does not check for or handle ``malloc`` returning ``NULL``.
+    - ``lfree()`` does not work if ``lmalloc`` has returned ``NULL`` as it will try to free ``NULL`` and fail.
 
