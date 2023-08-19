@@ -1,0 +1,151 @@
+Smart Pointers 
+==============
+
+In C++, a smart pointer is a way of correctly dealing with the memory management issues that can occur when using ``malloc`` or ``new``. On initialization, smart points will allocate the requested amount of memory, and on destruction they will automatically free that memory. A basic smart pointer is shown in the example below:
+
+.. code-block:: c++
+
+    template <class TYPE>
+    class SmartPointer {
+        public:
+        TYPE *ptr;
+
+        SmartPointer(size_t size){
+            ptr = new TYPE[size];
+        }
+
+        ~SmartPointer(){
+            delete ptr;
+        }
+    };
+
+Using the method above you have to access the raw pointer using the ``smart_pointer.ptr`` method. This can be improved using the example shown below:
+    
+.. code-block:: c++
+
+    template <class TYPE>
+    class SmartPtr {
+        TYPE *ptr; // Actual pointer
+    public:
+        explicit SmartPtr(TYPE* p = NULL) { ptr = p; }
+    
+        // Destructor
+        ~SmartPtr() { delete (ptr); }
+    
+        // Overloading dereferencing operator
+        TYPE& operator*() { return *ptr; }
+    };
+
+However, we shouldn't be rolling our own smart pointer as the ``memory`` library provides us with more fully featured smart pointer options as part of the C++ standard.
+
+Unique Pointers
+---------------
+
+Description
+~~~~~~~~~~~
+
+Extract from the C++ documentation:
+    
+    ``std::unique_ptr`` is a smart pointer that owns and manages another object through a pointer and disposes of that object when the unique_ptr goes out of scope. 
+
+    The object is disposed of, using the associated deleter when either of the following happens:
+
+        - the managing unique_ptr object is destroyed
+        - the managing unique_ptr object is assigned another pointer via ``operator=`` or ``reset()``.
+
+    The object is disposed of, using a potentially user-supplied deleter by calling ``get_deleter()(ptr)``. The default deleter uses the delete operator, which destroys the object and deallocates the memory.
+
+Allocation
+~~~~~~~~~~
+
+Create a pointer to an integer:
+
+.. code-block:: c++
+
+    std::unique_ptr<int> p(new int);
+
+Create a pointer to an array of ten integers:
+
+.. code-block:: c++
+
+    std::unique_ptr<int> p(new int[10])
+
+Allocate a custom object:
+
+.. code-block:: c++
+
+    class MyObject{
+        public:
+        int val;
+
+        MyObject(int _val){
+            val = _val;
+            std::cout << "Object Created" << std::endl;
+        }
+
+        ~MyObject(){
+            std::cout << val << std::endl;
+            std::cout << "Object Destroyed" << std::endl;
+        }
+    };
+
+    int main(){
+        std::unique_ptr<MyObject> p(new MyObject(4));
+    }
+
+The above would create the following console output
+
+.. code-block:: 
+
+    Object Created
+    4
+    Object Destroyed
+
+Unique pointers are the best way of replacing the standard ``malloc`` or ``new``, and is supported by all modern C++ versions.
+
+Using Unique Pointers
+~~~~~~~~~~~~~~~~~~~~~
+
+Unique pointers do not act like regular pointers when passing them to other functions. However, they support the same in-line operations as objects the hold. The following shows an example of how to use unique pointers:
+
+.. code-block:: c++
+    
+    #include <iostream>
+    #include <memory>
+
+    class MyObject{
+        public:
+            int val;
+
+            MyObject(int _val){
+                val = _val;
+                std::cout << "Object Created" << std::endl;
+            }
+
+            ~MyObject(){
+                std::cout << val << std::endl;
+                std::cout << "Object Destroyed" << std::endl;
+            }
+    };
+
+    void PrintObject(MyObject *obj){
+        std::cout << obj->val << std::endl;
+    }
+
+    int main(){
+        std::unique_ptr<MyObject> p(new MyObject(4));
+        /* Print the MyObject value */
+        PrintObject(p.get());
+        /* Change the MyObject value */
+        p->val = 5;
+        return 0;	
+    }
+
+This will return the following:
+
+.. code-block::
+
+    Object Created
+    4
+    5
+    Object Destroyed
