@@ -12,6 +12,7 @@
     <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
     <script src="../../_static/doctools.js"></script>
     <script src="../../_static/sphinx_highlight.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="../../_static/js/theme.js"></script>
     <script src="../../_static/js/petite-vue.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
@@ -206,6 +207,128 @@
 </pre></div>
 </div>
 </section>
+<section id="benchmarking-concurrency-using-cooley-tukey-fft">
+<h2>Benchmarking Concurrency using Cooley-Tukey FFT<a class="headerlink" href="#benchmarking-concurrency-using-cooley-tukey-fft" title="Permalink to this heading">¶</a></h2>
+<p>A good example of the performance improvements that can be made with concurrency is the basic Cooley-Tukey FFT algorithm. The algorithm reduces the <span class="math notranslate nohighlight">\(O(N^2)\)</span> complexity of the standard Discrete Fourier Transform to <span class="math notranslate nohighlight">\(O(N \\log{N})\)</span> when N is a power of two. The algorithm is shown below:</p>
+<div class="highlight-ada notranslate"><div class="highlight"><pre><span></span><span class="kd">function</span> <span class="nf">FFT</span> <span class="p">(</span> <span class="nv">IQ</span> <span class="p">: </span><span class="nv">Complex_Vector</span><span class="p">)</span> <span class="kr">return</span> <span class="n">Complex_Vector</span> <span class="kr">is</span>
+    <span class="n">output</span>   <span class="p">:</span> <span class="n">Complex_Vector</span><span class="p">(</span><span class="n">IQ</span><span class="p">&#39;</span><span class="na">Range</span><span class="p">);</span>
+    <span class="n">even</span>     <span class="p">:</span> <span class="n">Complex_Vector</span><span class="p">(</span><span class="mi">0</span> <span class="p">..</span> <span class="n">IQ</span><span class="p">&#39;</span><span class="na">Length</span><span class="o">/</span><span class="mi">2</span> <span class="o">-</span> <span class="mi">1</span><span class="p">);</span>
+    <span class="n">odd</span>      <span class="p">:</span> <span class="n">Complex_Vector</span><span class="p">(</span><span class="mi">0</span> <span class="p">..</span> <span class="n">IQ</span><span class="p">&#39;</span><span class="na">Length</span><span class="o">/</span><span class="mi">2</span> <span class="o">-</span> <span class="mi">1</span><span class="p">);</span>
+    <span class="n">even_fft</span> <span class="p">:</span> <span class="n">Complex_Vector</span><span class="p">(</span><span class="mi">0</span> <span class="p">..</span> <span class="n">IQ</span><span class="p">&#39;</span><span class="na">Length</span><span class="o">/</span><span class="mi">2</span> <span class="o">-</span> <span class="mi">1</span><span class="p">);</span>
+    <span class="n">odd_fft</span>  <span class="p">:</span> <span class="n">Complex_Vector</span><span class="p">(</span><span class="mf">0.</span><span class="p">.</span> <span class="n">IQ</span><span class="p">&#39;</span><span class="na">Length</span><span class="o">/</span><span class="mi">2</span> <span class="o">-</span> <span class="mi">1</span><span class="p">);</span>
+    <span class="n">even_idx</span> <span class="p">:</span> <span class="n">Standard</span><span class="p">.</span><span class="kt">Integer</span> <span class="p">:=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">odd_idx</span>  <span class="p">:</span> <span class="n">Standard</span><span class="p">.</span><span class="kt">Integer</span> <span class="p">:=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">W</span>        <span class="p">:</span> <span class="n">Ada</span><span class="p">.</span><span class="n">Numerics</span><span class="p">.</span><span class="n">Complex_Types</span><span class="p">.</span><span class="n">Complex</span><span class="p">;</span>
+    <span class="n">exponent</span> <span class="p">:</span> <span class="n">Ada</span><span class="p">.</span><span class="n">Numerics</span><span class="p">.</span><span class="n">Complex_Types</span><span class="p">.</span><span class="n">Complex</span><span class="p">;</span>
+    <span class="n">I_Float</span>  <span class="p">:</span> <span class="n">Standard</span><span class="p">.</span><span class="kt">Float</span><span class="p">;</span>
+    <span class="n">IQ_Len</span>   <span class="p">:</span> <span class="n">Standard</span><span class="p">.</span><span class="kt">Float</span><span class="p">;</span>
+<span class="kr">begin</span>
+    <span class="c1">-- Set output to input if length is one</span>
+    <span class="kr">if</span> <span class="n">IQ</span><span class="p">&#39;</span><span class="na">Length</span> <span class="o">=</span> <span class="mi">1</span> <span class="kr">then</span>
+        <span class="n">output</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="p">:=</span> <span class="n">IQ</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+        <span class="kr">return</span> <span class="n">output</span><span class="p">;</span>
+    <span class="kr">end</span> <span class="kr">if</span><span class="p">;</span>
+
+    <span class="n">IQ_Len</span> <span class="p">:=</span> <span class="n">Standard</span><span class="p">.</span><span class="kt">Float</span><span class="p">(</span><span class="n">IQ</span><span class="p">&#39;</span><span class="na">Length</span><span class="p">);</span>
+
+    <span class="kr">for</span> <span class="n">I</span> <span class="ow">in</span> <span class="mi">0</span> <span class="p">..</span> <span class="n">IQ</span><span class="p">&#39;</span><span class="na">Length</span> <span class="o">-</span> <span class="mi">1</span> <span class="kr">loop</span>
+        <span class="kr">if</span> <span class="n">I</span> <span class="ow">mod</span> <span class="mi">2</span> <span class="o">=</span> <span class="mi">0</span> <span class="kr">then</span>
+            <span class="n">even</span><span class="p">(</span><span class="n">even_idx</span><span class="p">)</span> <span class="p">:=</span> <span class="n">IQ</span><span class="p">(</span><span class="n">I</span><span class="p">);</span>
+            <span class="n">even_idx</span> <span class="p">:=</span> <span class="n">even_idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">;</span>
+        <span class="kr">else</span>
+            <span class="n">odd</span><span class="p">(</span><span class="n">odd_idx</span><span class="p">)</span> <span class="p">:=</span> <span class="n">IQ</span><span class="p">(</span><span class="n">I</span><span class="p">);</span>
+            <span class="n">odd_idx</span> <span class="p">:=</span> <span class="n">odd_idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">;</span>
+        <span class="kr">end</span> <span class="kr">if</span><span class="p">;</span>
+    <span class="kr">end</span> <span class="kr">loop</span><span class="p">;</span>
+
+    <span class="n">even_fft</span> <span class="p">:=</span> <span class="n">FFT</span><span class="p">(</span><span class="n">even</span><span class="p">);</span>
+    <span class="n">odd_fft</span>  <span class="p">:=</span> <span class="n">FFT</span><span class="p">(</span><span class="n">odd</span><span class="p">);</span>
+
+    <span class="kr">for</span> <span class="n">I</span> <span class="ow">in</span> <span class="mi">0</span> <span class="p">..</span> <span class="n">IQ</span><span class="p">&#39;</span><span class="na">Length</span><span class="o">/</span><span class="mi">2</span> <span class="o">-</span> <span class="mi">1</span> <span class="kr">loop</span>
+        <span class="n">I_Float</span> <span class="p">:=</span> <span class="n">Standard</span><span class="p">.</span><span class="kt">Float</span><span class="p">(</span><span class="n">I</span><span class="p">);</span>
+        <span class="n">exponent</span> <span class="p">:=</span> <span class="n">Complex</span><span class="p">&#39;(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">Standard</span><span class="p">.</span><span class="kt">Float</span><span class="p">&#39;(</span>
+            <span class="p">((</span><span class="o">-</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">Pi</span> <span class="o">*</span> <span class="n">I_Float</span><span class="p">)</span><span class="o">/</span><span class="n">IQ_Len</span><span class="p">)));</span>
+        <span class="n">W</span> <span class="p">:=</span> <span class="n">e</span> <span class="o">**</span> <span class="n">exponent</span><span class="p">;</span>
+        <span class="n">output</span><span class="p">(</span><span class="n">I</span><span class="p">)</span> <span class="p">:=</span> <span class="n">even_fft</span><span class="p">(</span><span class="n">I</span><span class="p">)</span> <span class="o">+</span> <span class="n">W</span> <span class="o">*</span> <span class="n">odd_fft</span><span class="p">(</span><span class="n">I</span><span class="p">);</span>
+        <span class="n">output</span><span class="p">(</span><span class="n">I</span> <span class="o">+</span> <span class="n">IQ</span><span class="p">&#39;</span><span class="na">Length</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span> <span class="p">:=</span> <span class="n">even_fft</span><span class="p">(</span><span class="n">I</span><span class="p">)</span> <span class="o">-</span> <span class="n">W</span> <span class="o">*</span> <span class="n">odd_fft</span><span class="p">(</span><span class="n">I</span><span class="p">);</span>
+    <span class="kr">end</span> <span class="kr">loop</span><span class="p">;</span>
+
+    <span class="kr">return</span> <span class="n">output</span><span class="p">;</span>
+<span class="kr">end</span> <span class="nf">FFT</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>The double recursion allows for concurrency to potentially add a performance improvements on multi-core systems. This can be achieved by creating a task which takes the even parts as an input and then calls the normal FFT function. This will then run in parallel with the odd element of the FFT recursion, before the two parts are combined in a single threaded manner. An example of this is shown below:</p>
+<div class="highlight-ada notranslate"><div class="highlight"><pre><span></span><span class="kd">function</span> <span class="nf">FFT_CONC</span> <span class="p">(</span> <span class="nv">IQ</span> <span class="p">: </span><span class="nv">Complex_Vector</span><span class="p">)</span> <span class="kr">return</span> <span class="n">Complex_Vector</span> <span class="kr">is</span>
+
+    <span class="kd">task</span> <span class="n">FFT_TASK</span> <span class="kr">is</span>
+        <span class="kd">entry</span> <span class="nf">Go</span> <span class="p">(</span> <span class="nv">IQ</span> <span class="p">: </span><span class="nv">Complex_Vector</span><span class="p">);</span>
+        <span class="kd">entry</span> <span class="nf">Get</span> <span class="p">(</span> <span class="nv">Result</span> <span class="p">: </span><span class="nv">out</span> <span class="nv">Complex_Vector</span><span class="p">);</span>
+    <span class="kr">end</span> <span class="nf">FFT_TASK</span><span class="p">;</span>
+
+    <span class="kd">task</span> <span class="kr">body</span> <span class="n">FFT_TASK</span> <span class="kr">is</span>
+        <span class="n">Int_IQ</span>     <span class="p">:</span> <span class="n">Complex_Vector</span><span class="p">(</span><span class="mi">0</span> <span class="p">..</span> <span class="n">IQ</span><span class="p">&#39;</span><span class="na">Length</span><span class="o">/</span><span class="mi">2</span> <span class="o">-</span> <span class="mi">1</span><span class="p">);</span>
+        <span class="n">Int_Result</span> <span class="p">:</span> <span class="n">Complex_Vector</span><span class="p">(</span><span class="mi">0</span> <span class="p">..</span> <span class="n">IQ</span><span class="p">&#39;</span><span class="na">length</span><span class="o">/</span><span class="mi">2</span> <span class="o">-</span> <span class="mi">1</span><span class="p">);</span>
+    <span class="kr">begin</span>
+        <span class="kr">accept</span> <span class="n">Go</span> <span class="p">(</span> <span class="n">IQ</span> <span class="p">:</span> <span class="n">Complex_Vector</span><span class="p">)</span> <span class="kr">do</span>
+                <span class="n">Int_IQ</span> <span class="p">:=</span> <span class="n">IQ</span><span class="p">;</span>
+        <span class="kr">end</span> <span class="nf">Go</span><span class="p">;</span>
+
+        <span class="n">Int_Result</span> <span class="p">:=</span> <span class="n">FFT</span><span class="p">(</span><span class="n">Int_IQ</span><span class="p">);</span>
+
+        <span class="kr">accept</span> <span class="n">Get</span> <span class="p">(</span> <span class="n">Result</span> <span class="p">:</span> <span class="kr">out</span> <span class="n">Complex_Vector</span><span class="p">)</span> <span class="kr">do</span>
+            <span class="n">Result</span> <span class="p">:=</span> <span class="n">Int_Result</span><span class="p">;</span>
+        <span class="kr">end</span> <span class="nf">Get</span><span class="p">;</span>
+    <span class="kr">end</span> <span class="nf">FFT_TASK</span><span class="p">;</span>
+
+    <span class="n">output</span>   <span class="p">:</span> <span class="n">Complex_Vector</span><span class="p">(</span><span class="n">IQ</span><span class="p">&#39;</span><span class="na">Range</span><span class="p">);</span>
+    <span class="n">even</span>     <span class="p">:</span> <span class="n">Complex_Vector</span><span class="p">(</span><span class="mi">0</span> <span class="p">..</span> <span class="n">IQ</span><span class="p">&#39;</span><span class="na">Length</span><span class="o">/</span><span class="mi">2</span> <span class="o">-</span> <span class="mi">1</span><span class="p">);</span>
+    <span class="n">odd</span>      <span class="p">:</span> <span class="n">Complex_Vector</span><span class="p">(</span><span class="mi">0</span> <span class="p">..</span> <span class="n">IQ</span><span class="p">&#39;</span><span class="na">Length</span><span class="o">/</span><span class="mi">2</span> <span class="o">-</span> <span class="mi">1</span><span class="p">);</span>
+    <span class="n">even_fft</span> <span class="p">:</span> <span class="n">Complex_Vector</span><span class="p">(</span><span class="mi">0</span> <span class="p">..</span> <span class="n">IQ</span><span class="p">&#39;</span><span class="na">Length</span><span class="o">/</span><span class="mi">2</span> <span class="o">-</span> <span class="mi">1</span><span class="p">);</span>
+    <span class="n">odd_fft</span>  <span class="p">:</span> <span class="n">Complex_Vector</span><span class="p">(</span><span class="mf">0.</span><span class="p">.</span> <span class="n">IQ</span><span class="p">&#39;</span><span class="na">Length</span><span class="o">/</span><span class="mi">2</span> <span class="o">-</span> <span class="mi">1</span><span class="p">);</span>
+    <span class="n">even_idx</span> <span class="p">:</span> <span class="n">Standard</span><span class="p">.</span><span class="kt">Integer</span> <span class="p">:=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">odd_idx</span>  <span class="p">:</span> <span class="n">Standard</span><span class="p">.</span><span class="kt">Integer</span> <span class="p">:=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">W</span>        <span class="p">:</span> <span class="n">Ada</span><span class="p">.</span><span class="n">Numerics</span><span class="p">.</span><span class="n">Complex_Types</span><span class="p">.</span><span class="n">Complex</span><span class="p">;</span>
+    <span class="n">exponent</span> <span class="p">:</span> <span class="n">Ada</span><span class="p">.</span><span class="n">Numerics</span><span class="p">.</span><span class="n">Complex_Types</span><span class="p">.</span><span class="n">Complex</span><span class="p">;</span>
+    <span class="n">I_Float</span>  <span class="p">:</span> <span class="n">Standard</span><span class="p">.</span><span class="kt">Float</span><span class="p">;</span>
+    <span class="n">IQ_Len</span>   <span class="p">:</span> <span class="n">Standard</span><span class="p">.</span><span class="kt">Float</span><span class="p">;</span>
+<span class="kr">begin</span>
+    <span class="c1">-- Set output to input if length is one</span>
+    <span class="kr">if</span> <span class="n">IQ</span><span class="p">&#39;</span><span class="na">Length</span> <span class="o">=</span> <span class="mi">1</span> <span class="kr">then</span>
+        <span class="n">output</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="p">:=</span> <span class="n">IQ</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+        <span class="kr">return</span> <span class="n">output</span><span class="p">;</span>
+    <span class="kr">end</span> <span class="kr">if</span><span class="p">;</span>
+
+    <span class="n">IQ_Len</span> <span class="p">:=</span> <span class="n">Standard</span><span class="p">.</span><span class="kt">Float</span><span class="p">(</span><span class="n">IQ</span><span class="p">&#39;</span><span class="na">Length</span><span class="p">);</span>
+
+    <span class="kr">for</span> <span class="n">I</span> <span class="ow">in</span> <span class="mi">0</span> <span class="p">..</span> <span class="n">IQ</span><span class="p">&#39;</span><span class="na">Length</span> <span class="o">-</span> <span class="mi">1</span> <span class="kr">loop</span>
+        <span class="kr">if</span> <span class="n">I</span> <span class="ow">mod</span> <span class="mi">2</span> <span class="o">=</span> <span class="mi">0</span> <span class="kr">then</span>
+            <span class="n">even</span><span class="p">(</span><span class="n">even_idx</span><span class="p">)</span> <span class="p">:=</span> <span class="n">IQ</span><span class="p">(</span><span class="n">I</span><span class="p">);</span>
+            <span class="n">even_idx</span> <span class="p">:=</span> <span class="n">even_idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">;</span>
+        <span class="kr">else</span>
+            <span class="n">odd</span><span class="p">(</span><span class="n">odd_idx</span><span class="p">)</span> <span class="p">:=</span> <span class="n">IQ</span><span class="p">(</span><span class="n">I</span><span class="p">);</span>
+            <span class="n">odd_idx</span> <span class="p">:=</span> <span class="n">odd_idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">;</span>
+        <span class="kr">end</span> <span class="kr">if</span><span class="p">;</span>
+    <span class="kr">end</span> <span class="kr">loop</span><span class="p">;</span>
+
+    <span class="n">FFT_TASK</span><span class="p">.</span><span class="n">Go</span><span class="p">(</span><span class="n">even</span><span class="p">);</span>
+    <span class="n">odd_fft</span>  <span class="p">:=</span> <span class="n">FFT</span><span class="p">(</span><span class="n">odd</span><span class="p">);</span>
+    <span class="n">FFT_TASK</span><span class="p">.</span><span class="n">Get</span><span class="p">(</span><span class="n">even_fft</span><span class="p">);</span>
+
+    <span class="kr">for</span> <span class="n">I</span> <span class="ow">in</span> <span class="mi">0</span> <span class="p">..</span> <span class="n">IQ</span><span class="p">&#39;</span><span class="na">Length</span><span class="o">/</span><span class="mi">2</span> <span class="o">-</span> <span class="mi">1</span> <span class="kr">loop</span>
+        <span class="n">I_Float</span> <span class="p">:=</span> <span class="n">Standard</span><span class="p">.</span><span class="kt">Float</span><span class="p">(</span><span class="n">I</span><span class="p">);</span>
+        <span class="n">exponent</span> <span class="p">:=</span> <span class="n">Complex</span><span class="p">&#39;(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">Standard</span><span class="p">.</span><span class="kt">Float</span><span class="p">&#39;(</span>
+            <span class="p">((</span><span class="o">-</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">Pi</span> <span class="o">*</span> <span class="n">I_Float</span><span class="p">)</span><span class="o">/</span><span class="n">IQ_Len</span><span class="p">)));</span>
+        <span class="n">W</span> <span class="p">:=</span> <span class="n">e</span> <span class="o">**</span> <span class="n">exponent</span><span class="p">;</span>
+        <span class="n">output</span><span class="p">(</span><span class="n">I</span><span class="p">)</span> <span class="p">:=</span> <span class="n">even_fft</span><span class="p">(</span><span class="n">I</span><span class="p">)</span> <span class="o">+</span> <span class="n">W</span> <span class="o">*</span> <span class="n">odd_fft</span><span class="p">(</span><span class="n">I</span><span class="p">);</span>
+        <span class="n">output</span><span class="p">(</span><span class="n">I</span> <span class="o">+</span> <span class="n">IQ</span><span class="p">&#39;</span><span class="na">Length</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span> <span class="p">:=</span> <span class="n">even_fft</span><span class="p">(</span><span class="n">I</span><span class="p">)</span> <span class="o">-</span> <span class="n">W</span> <span class="o">*</span> <span class="n">odd_fft</span><span class="p">(</span><span class="n">I</span><span class="p">);</span>
+    <span class="kr">end</span> <span class="kr">loop</span><span class="p">;</span>
+    <span class="kr">return</span> <span class="n">output</span><span class="p">;</span>
+
+<span class="kr">end</span> <span class="nf">FFT_CONC</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>To benchmark these implementations the time taken for each implementation to conduct 100 FFTs of size 32768 was measured. The non-concurrent version tool 5.598s, whereas the concurrent version took 3.167 seconds. This is almost a doubling in speed, but not quite, and this is likely due to the time taken to spin up a new thread and to stitch together the outputs once the thread has completed.</p>
+</section>
 </section>
 
 
@@ -225,6 +348,7 @@
 <li><a class="reference internal" href="#">Concurrency in ADA</a><ul>
 <li><a class="reference internal" href="#concurrency-with-tasks">Concurrency with Tasks</a></li>
 <li><a class="reference internal" href="#passing-values-to-and-from-tasks">Passing Values To and From Tasks</a></li>
+<li><a class="reference internal" href="#benchmarking-concurrency-using-cooley-tukey-fft">Benchmarking Concurrency using Cooley-Tukey FFT</a></li>
 </ul>
 </li>
 </ul>

@@ -75,3 +75,130 @@ This task could then be used in a main procedure like this:
         Example_Task.Get(Result);
     end Main;
 
+Benchmarking Concurrency using Cooley-Tukey FFT
+------------------------------------------------
+
+A good example of the performance improvements that can be made with concurrency is the basic Cooley-Tukey FFT algorithm. The algorithm reduces the :math:`O(N^2)` complexity of the standard Discrete Fourier Transform to :math:`O(N \\log{N})` when N is a power of two. The algorithm is shown below:
+
+.. code-block:: ada
+
+    function FFT ( IQ : Complex_Vector) return Complex_Vector is
+        output   : Complex_Vector(IQ'Range);
+        even     : Complex_Vector(0 .. IQ'Length/2 - 1);
+        odd      : Complex_Vector(0 .. IQ'Length/2 - 1);
+        even_fft : Complex_Vector(0 .. IQ'Length/2 - 1);
+        odd_fft  : Complex_Vector(0.. IQ'Length/2 - 1);
+        even_idx : Standard.Integer := 0;
+        odd_idx  : Standard.Integer := 0;
+        W        : Ada.Numerics.Complex_Types.Complex;
+        exponent : Ada.Numerics.Complex_Types.Complex;
+        I_Float  : Standard.Float;
+        IQ_Len   : Standard.Float;
+    begin
+        -- Set output to input if length is one
+        if IQ'Length = 1 then
+            output(0) := IQ(0);
+            return output;
+        end if;
+
+        IQ_Len := Standard.Float(IQ'Length);
+
+        for I in 0 .. IQ'Length - 1 loop
+            if I mod 2 = 0 then
+                even(even_idx) := IQ(I);
+                even_idx := even_idx + 1;
+            else
+                odd(odd_idx) := IQ(I);
+                odd_idx := odd_idx + 1;
+            end if;
+        end loop;
+
+        even_fft := FFT(even);
+        odd_fft  := FFT(odd);
+
+        for I in 0 .. IQ'Length/2 - 1 loop
+            I_Float := Standard.Float(I);
+            exponent := Complex'(0.0, Standard.Float'(
+                ((-2.0 * Pi * I_Float)/IQ_Len)));
+            W := e ** exponent;
+            output(I) := even_fft(I) + W * odd_fft(I);
+            output(I + IQ'Length/2) := even_fft(I) - W * odd_fft(I);
+        end loop;
+
+        return output;
+    end FFT;
+
+The double recursion allows for concurrency to potentially add a performance improvements on multi-core systems. This can be achieved by creating a task which takes the even parts as an input and then calls the normal FFT function. This will then run in parallel with the odd element of the FFT recursion, before the two parts are combined in a single threaded manner. An example of this is shown below:
+
+.. code-block:: ada
+
+    function FFT_CONC ( IQ : Complex_Vector) return Complex_Vector is
+    
+        task FFT_TASK is
+            entry Go ( IQ : Complex_Vector);
+            entry Get ( Result : out Complex_Vector);
+        end FFT_TASK;
+
+        task body FFT_TASK is
+            Int_IQ     : Complex_Vector(0 .. IQ'Length/2 - 1);
+            Int_Result : Complex_Vector(0 .. IQ'length/2 - 1);
+        begin
+            accept Go ( IQ : Complex_Vector) do
+                    Int_IQ := IQ;
+            end Go;
+            
+            Int_Result := FFT(Int_IQ);
+
+            accept Get ( Result : out Complex_Vector) do
+                Result := Int_Result;
+            end Get;
+        end FFT_TASK;
+
+        output   : Complex_Vector(IQ'Range);
+        even     : Complex_Vector(0 .. IQ'Length/2 - 1);
+        odd      : Complex_Vector(0 .. IQ'Length/2 - 1);
+        even_fft : Complex_Vector(0 .. IQ'Length/2 - 1);
+        odd_fft  : Complex_Vector(0.. IQ'Length/2 - 1);
+        even_idx : Standard.Integer := 0;
+        odd_idx  : Standard.Integer := 0;
+        W        : Ada.Numerics.Complex_Types.Complex;
+        exponent : Ada.Numerics.Complex_Types.Complex;
+        I_Float  : Standard.Float;
+        IQ_Len   : Standard.Float;
+    begin
+        -- Set output to input if length is one
+        if IQ'Length = 1 then
+            output(0) := IQ(0);
+            return output;
+        end if;
+
+        IQ_Len := Standard.Float(IQ'Length);
+
+        for I in 0 .. IQ'Length - 1 loop
+            if I mod 2 = 0 then
+                even(even_idx) := IQ(I);
+                even_idx := even_idx + 1;
+            else
+                odd(odd_idx) := IQ(I);
+                odd_idx := odd_idx + 1;
+            end if;
+        end loop;
+
+        FFT_TASK.Go(even);
+        odd_fft  := FFT(odd);
+        FFT_TASK.Get(even_fft);
+
+        for I in 0 .. IQ'Length/2 - 1 loop
+            I_Float := Standard.Float(I);
+            exponent := Complex'(0.0, Standard.Float'(
+                ((-2.0 * Pi * I_Float)/IQ_Len)));
+            W := e ** exponent;
+            output(I) := even_fft(I) + W * odd_fft(I);
+            output(I + IQ'Length/2) := even_fft(I) - W * odd_fft(I);
+        end loop;
+        return output;
+
+    end FFT_CONC;
+
+
+To benchmark these implementations the time taken for each implementation to conduct 100 FFTs of size 32768 was measured. The non-concurrent version tool 5.598s, whereas the concurrent version took 3.167 seconds. This is almost a doubling in speed, but not quite, and this is likely due to the time taken to spin up a new thread and to stitch together the outputs once the thread has completed. 
