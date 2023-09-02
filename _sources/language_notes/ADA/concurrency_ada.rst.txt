@@ -1,0 +1,77 @@
+Concurrency in ADA
+==================
+
+Concurrency with Tasks 
+----------------------------
+
+Modern versions of ADA support concurrency through ``tasks``. The easiest way of using this is to define a task like you would a procedure or function. A basic example is as follows:
+
+.. code-block:: ada
+
+    with Ada.Text_IO; use Ada.Text_IO;
+
+    procedure Main is
+        task My_Task;
+
+        task body My_Task is
+        begin
+            for I in 1 .. 10 loop
+                Put_Line("In The Task");
+            end for;
+        end MyTask;
+    begin
+        for I in 1 .. 10 loop
+            Put_Line("Outside the Task");
+        end loop;
+    end Main;
+
+This will print "Outside the Task" and "Inside the Task" interleaved, showing that you have concurrent execution of the Main procedure and the ``My_Task`` task. 
+
+Note that tasks are started automatically at the start of their relevant procedure.
+
+Passing Values To and From Tasks
+--------------------------------
+
+To pass values to and from tasks we need to use the ``entry`` syntax in the task definition. An example is shown below:
+
+.. code-block:: ada
+
+    task Example_Task is
+        entry Go ( Input : Integer);
+        entry Get ( Result : out Integer);
+    end Example_Task;
+
+This defines a task which will take an input when its ``Go()`` function is called and return an output when the ``Get()`` function is called.
+
+When writing the actual task code we need to use ``accept`` statements. These will cause the task to wait until a specific entry is called, at which point the task will continue. It should be noted that code specified inside the accept statement is *not* executed concurrently with the main process. The associated task body for the above would look like this:
+
+.. code-block:: ada
+
+    task body Example_Task is
+        _Input  : Integer;
+        _Result : Integer;
+    begin
+        accept Go ( Input : Integer) do
+            _Input := Input;
+        end Go;
+
+        _Result := Slow_Function(_Input);
+
+        accept Get ( Result : out Integer) do
+            Result := _Result;
+        end Get;
+    end Example_Task;
+
+This task could then be used in a main procedure like this:
+
+.. code-block:: ada
+
+    procedure Main is
+    ...
+    begin
+        X := 4;
+        Example_Task.Go(X);
+        ...
+        Example_Task.Get(Result);
+    end Main;
+

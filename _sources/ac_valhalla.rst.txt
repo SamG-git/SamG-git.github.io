@@ -1,7 +1,7 @@
 Running AC Valhalla Using Proton
 ================================
 
-If, like me, you've purchased AC Valhalla using the Ubisoft Connect store rather than though Steam, getting it to run on Linux can be a challenge. This can be complicated further if you use Nvidia drivers. The rough required steps are as follows:
+If, like me, you've purchased AC Valhalla using the Ubisoft Connect store rather than through Steam, getting it to run on Linux can be a challenge. This can be complicated further if you use Nvidia drivers. The rough required steps are as follows:
 
 1. Set-up Ubisoft Connect as an external app on Steam. This can be achieved by:
     a. Downloading the Windows installer for Ubisoft Connect.
