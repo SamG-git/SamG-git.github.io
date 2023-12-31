@@ -1,0 +1,14 @@
+OpenCL Notes
+============
+
+Installation
+------------
+
+On Ubuntu 22.04 run the following command to install OpenCL. Note this only works when you have an Nvidia GPU and the proprietary drivers installed.
+
+.. code-block:: bash
+
+    sudo apt install nvidia-cuda-toolkit clinfo
+
+
+You can now restart you PC and use the ``clinfo`` command to verify the installation.

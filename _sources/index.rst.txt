@@ -19,6 +19,7 @@ Quick Links
    ./linux_gaming
    ./embedded_notes
    ./language_notes/language_notes
+   ./Software/Software
 
 Indices and tables
 ------------------

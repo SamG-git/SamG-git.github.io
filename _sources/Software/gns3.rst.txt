@@ -1,0 +1,43 @@
+GNS3 Notes
+==========
+
+Installation on Ubuntu 22.04
+----------------------------
+
+To install GNS3 on Ubuntu 22.04, first disable IPV6 using the following commands:
+
+.. code-block:: bash
+
+    sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1
+    sudo sysctl -w net.ipv6.conf.default.disable_ipv6=1
+    sudo sysctl -w net.ipv6.conf.lo.disable_ipv6=1
+
+This will enable you to add the required apt repository by running the command:
+
+.. code-block:: bash
+
+    sudo add-apt-repository ppa:gns3/ppa
+
+Next, update and upgrade your system using:
+
+.. code-block:: bash
+
+    sudo apt update && sudo apt upgrade
+
+Now, install the GNS3 server and GUI packages:
+
+.. code-block:: bash
+
+    sudo apt install gns3-server gns3-gui
+
+To run these without super-user privileges you need to add your user to a number of new groups. Run the following commands:
+
+.. code-block:: bash
+
+    sudo usermod -aG libvirt $USER
+    sudo usermod -aG kvm $USER
+    sudo usermod -aG wireshark $USER
+    sudo usermod -aG ubridge $USER
+
+Finally, reboot your PC.
+
