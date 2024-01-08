@@ -150,6 +150,14 @@ This code has been modified using the example given in the Linux documentation.
         exit(EXIT_SUCCESS);
     }
 
+The ``connection.h`` file:
+
+.. code-block:: c
+
+    #define SOCKET_NAME "/tmp/9Lq7BNBnBycd6nxy.socket"
+    #define BUFFER_SIZE 1500
+
+    
 Python Client 
 -------------
 
