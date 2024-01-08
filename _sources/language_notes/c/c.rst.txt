@@ -5,3 +5,4 @@ C Language Notes
     :maxdepth: 2
 
     lazy_memory_management
+    unix_sockets
