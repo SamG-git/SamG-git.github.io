@@ -1,0 +1,134 @@
+Benchmarking Global Mutexes
+===========================
+
+The easiest way to implement mutexes in C++ is to declare a global mutex at the top of your program. This works well for small programs, but can cause performance implications if the program contains multiple groups of threads acting independently. The following examples shows two programs which calculate the same output using four threads. The first uses a single, global mutex, and the second uses separate mutexes for each thread group:
+
+Single Mutex Example
+--------------------
+
+.. code-block:: c++
+
+    #include <thread>
+    #include <mutex>
+    #include <iostream>
+
+    #define BUFFER_SIZE 1000000
+
+    std::mutex mtx;
+
+    void sum(uint32_t *input, uint32_t *output_ptr){
+        uint32_t output = 0;
+        for(size_t i = 0; i < BUFFER_SIZE; i++){
+            mtx.lock();
+            output = (output + input[i]) % 1234;
+            mtx.unlock();
+        }
+        *output_ptr = output;	
+    }
+
+    void rand_sum(uint32_t *input, uint32_t *output_ptr){
+        uint32_t output = 0;
+        for(size_t i = 0; i < BUFFER_SIZE; i++){
+            mtx.lock();
+            output += (output + input[i] + rand()) % 1234;
+            mtx.unlock();
+        }
+        *output_ptr = output;
+    }
+
+    int main(){
+        uint32_t buffer1[BUFFER_SIZE];
+        uint32_t buffer2[BUFFER_SIZE];
+        
+        for(size_t i = 0; i < BUFFER_SIZE; i++){
+            buffer1[i] = rand();
+            buffer2[i] = rand();
+        }
+        
+        for(size_t i = 0; i < 10; i++){
+            uint32_t sum1_out, sum2_out, rand1_out, rand2_out;
+            
+            std::thread sum1(sum, buffer1, &sum1_out);
+            std::thread rand1(rand_sum, buffer1, &rand1_out);
+            std::thread sum2(sum, buffer2, &sum2_out);
+            std::thread rand2(rand_sum, buffer2, &rand2_out);
+            
+            sum1.join();
+            sum2.join();
+            rand1.join();
+            rand2.join();
+            
+            printf("%02x %02x %02x %02x\n", sum1_out, sum2_out, rand1_out, rand2_out);
+        }
+        
+        return 0;
+    }
+
+
+Mutli Mutex Example
+-------------------
+
+.. code-block:: c++
+
+    #include <thread>
+    #include <mutex>
+    #include <iostream>
+
+    #define BUFFER_SIZE 1000000
+
+
+    void sum(uint32_t *input, uint32_t *output_ptr, std::mutex *mtx){
+        uint32_t output = 0;
+        for(size_t i = 0; i < BUFFER_SIZE; i++){
+            mtx->lock();
+            output = (output + input[i]) % 1234;
+            mtx->unlock();
+        }
+        *output_ptr = output;	
+    }
+
+    void rand_sum(uint32_t *input, uint32_t *output_ptr, std::mutex *mtx){
+        uint32_t output = 0;
+        for(size_t i = 0; i < BUFFER_SIZE; i++){
+            mtx->lock();
+            output += (output + input[i] + rand()) % 1234;
+            mtx->unlock();
+        }
+        *output_ptr = output;
+    }
+
+    int main(){
+        uint32_t buffer1[BUFFER_SIZE];
+        uint32_t buffer2[BUFFER_SIZE];
+        
+        std::mutex mtx1, mtx2;
+        
+        for(size_t i = 0; i < BUFFER_SIZE; i++){
+            buffer1[i] = rand();
+            buffer2[i] = rand();
+        }
+        
+        for(size_t i = 0; i < 10; i++){
+            uint32_t sum1_out, sum2_out, rand1_out, rand2_out;
+            
+            std::thread sum1(sum, buffer1, &sum1_out, &mtx1);
+            std::thread rand1(rand_sum, buffer1, &rand1_out, &mtx1);
+            std::thread sum2(sum, buffer2, &sum2_out, &mtx2);
+            std::thread rand2(rand_sum, buffer2, &rand2_out, &mtx2);
+            
+            sum1.join();
+            sum2.join();
+            rand1.join();
+            rand2.join();
+            
+            printf("%02x %02x %02x %02x\n", sum1_out, sum2_out, rand1_out, rand2_out);
+        }
+        
+        return 0;
+    }
+
+
+Speed Difference
+----------------
+
+Executing both programs with maximum GCC optimizations enabled resulted in start performance differences. The single mutex program executed in 1.432s, while the dual mutex program executed in 0.591 seconds.
