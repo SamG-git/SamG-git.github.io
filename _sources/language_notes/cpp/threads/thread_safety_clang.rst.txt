@@ -24,4 +24,4 @@ Firstly, it should be noted that the thread-safe checking feature only works on 
     uint32_t buffer1[BUFFER_SIZE] GUARDED_BY(mtx1);
     uint32_t buffer2[BUFFER_SIZE] GUARDED_BY(mtx2);
 
-Then, to enable checking, you must pass the ``-Wthread-safety`` argument to the ``clang++`` compiler. This will then produce warning any time a thread access a guarded variable without having the mutex lock. All checking is done at compile-time, so there is no added overhead.
+Then, to enable checking, you must pass the ``-Wthread-safety`` argument to the ``clang++`` compiler. This will then produce warning any time a thread access a guarded variable without having the mutex lock. All checking is done at compile-time, so there is no added overhead. Furthermore, the header and Mutex classes are G++ compatible, so you can re-use the code with other compilers.

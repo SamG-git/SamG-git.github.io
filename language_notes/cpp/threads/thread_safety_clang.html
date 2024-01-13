@@ -164,7 +164,7 @@
 <span class="kt">uint32_t</span><span class="w"> </span><span class="n">buffer2</span><span class="p">[</span><span class="n">BUFFER_SIZE</span><span class="p">]</span><span class="w"> </span><span class="n">GUARDED_BY</span><span class="p">(</span><span class="n">mtx2</span><span class="p">);</span>
 </pre></div>
 </div>
-<p>Then, to enable checking, you must pass the <code class="docutils literal notranslate"><span class="pre">-Wthread-safety</span></code> argument to the <code class="docutils literal notranslate"><span class="pre">clang++</span></code> compiler. This will then produce warning any time a thread access a guarded variable without having the mutex lock. All checking is done at compile-time, so there is no added overhead.</p>
+<p>Then, to enable checking, you must pass the <code class="docutils literal notranslate"><span class="pre">-Wthread-safety</span></code> argument to the <code class="docutils literal notranslate"><span class="pre">clang++</span></code> compiler. This will then produce warning any time a thread access a guarded variable without having the mutex lock. All checking is done at compile-time, so there is no added overhead. Furthermore, the header and Mutex classes are G++ compatible, so you can re-use the code with other compilers.</p>
 </section>
 </section>
 
