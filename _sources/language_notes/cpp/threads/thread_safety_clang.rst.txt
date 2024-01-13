@@ -1,0 +1,27 @@
+Enforcing Thread Safety using ``clang``
+=======================================
+
+The ``clang`` compiler supports static analysis of thread safety based on a set of macros defined in a custom header file. For full documentation on this feature, see the wiki page here: `Thread Safety Analysis <https://releases.llvm.org/3.5.0/tools/clang/docs/ThreadSafetyAnalysis.html>`_
+
+Creating Custom Header File 
+---------------------------
+
+For this feature to work, a custom header file defining some Macros and a custom Mutex class is required. The header file at the bottom of the above link provides a good base for this, along with descriptions of how to fill it out for a given threading library. The C++ standard provides the ``std::mutex`` class in the ``<mutex>`` header. I have written an implementation of the Clang Mutex header file and class in this repository: `C++ Threading Examples <https://github.com/SamG-git/cpp_threading_examples>`_ 
+
+Example Use
+-----------
+
+Firstly, it should be noted that the thread-safe checking feature only works on global variables or in members in classes, not on local variables. To enable the checking, you first have to create a variable and an associated muted, and then tell the compiler that the mutex guards that variable. An example is shown below:
+
+.. code-block:: C++
+
+    #include "mutex.h"
+
+    #define BUFFER_SIZE 1000000
+
+        
+    Mutex mtx1, mtx2;
+    uint32_t buffer1[BUFFER_SIZE] GUARDED_BY(mtx1);
+    uint32_t buffer2[BUFFER_SIZE] GUARDED_BY(mtx2);
+
+Then, to enable checking, you must pass the ``-Wthread-safety`` argument to the ``clang++`` compiler. This will then produce warning any time a thread access a guarded variable without having the mutex lock. All checking is done at compile-time, so there is no added overhead.
