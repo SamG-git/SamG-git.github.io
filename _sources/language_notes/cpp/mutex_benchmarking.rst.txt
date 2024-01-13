@@ -16,7 +16,7 @@ Single Mutex Example
 
     std::mutex mtx;
 
-    void sum(uint32_t *input, uint32_t *output_ptr){
+    void some_work(const uint32_t *input, uint32_t *output_ptr){
         uint32_t output = 0;
         for(size_t i = 0; i < BUFFER_SIZE; i++){
             mtx.lock();
@@ -26,7 +26,7 @@ Single Mutex Example
         *output_ptr = output;	
     }
 
-    void rand_sum(uint32_t *input, uint32_t *output_ptr){
+    void some_other_work(const uint32_t *input, uint32_t *output_ptr){
         uint32_t output = 0;
         for(size_t i = 0; i < BUFFER_SIZE; i++){
             mtx.lock();
@@ -46,26 +46,26 @@ Single Mutex Example
         }
         
         for(size_t i = 0; i < 10; i++){
-            uint32_t sum1_out, sum2_out, rand1_out, rand2_out;
+            uint32_t some_work1_out, some_work2_out, other_work1_out, rand2_out;
             
-            std::thread sum1(sum, buffer1, &sum1_out);
-            std::thread rand1(rand_sum, buffer1, &rand1_out);
-            std::thread sum2(sum, buffer2, &sum2_out);
-            std::thread rand2(rand_sum, buffer2, &rand2_out);
+            std::thread work1(some_work, buffer1, &some_work1_out);
+            std::thread other_work1(some_other_work, buffer1, &other_work1_out);
+            std::thread work2(some_work, buffer2, &some_work2_out);
+            std::thread rand2(some_other_work, buffer2, &rand2_out);
             
-            sum1.join();
-            sum2.join();
-            rand1.join();
+            work1.join();
+            work2.join();
+            other_work1.join();
             rand2.join();
             
-            printf("%02x %02x %02x %02x\n", sum1_out, sum2_out, rand1_out, rand2_out);
+            printf("%02x %02x %02x %02x\n", some_work1_out, some_work2_out, other_work1_out, rand2_out);
         }
         
         return 0;
     }
 
 
-Mutli Mutex Example
+Multi Mutex Example
 -------------------
 
 .. code-block:: c++
@@ -77,7 +77,7 @@ Mutli Mutex Example
     #define BUFFER_SIZE 1000000
 
 
-    void sum(uint32_t *input, uint32_t *output_ptr, std::mutex *mtx){
+    void some_work(const uint32_t *input, uint32_t *output_ptr, std::mutex *mtx){
         uint32_t output = 0;
         for(size_t i = 0; i < BUFFER_SIZE; i++){
             mtx->lock();
@@ -87,7 +87,7 @@ Mutli Mutex Example
         *output_ptr = output;	
     }
 
-    void rand_sum(uint32_t *input, uint32_t *output_ptr, std::mutex *mtx){
+    void some_other_work(const uint32_t *input, uint32_t *output_ptr, std::mutex *mtx){
         uint32_t output = 0;
         for(size_t i = 0; i < BUFFER_SIZE; i++){
             mtx->lock();
@@ -109,26 +109,27 @@ Mutli Mutex Example
         }
         
         for(size_t i = 0; i < 10; i++){
-            uint32_t sum1_out, sum2_out, rand1_out, rand2_out;
+            uint32_t work1_out, work2_out, other_work1_out, other_work2_out;
             
-            std::thread sum1(sum, buffer1, &sum1_out, &mtx1);
-            std::thread rand1(rand_sum, buffer1, &rand1_out, &mtx1);
-            std::thread sum2(sum, buffer2, &sum2_out, &mtx2);
-            std::thread rand2(rand_sum, buffer2, &rand2_out, &mtx2);
+            std::thread work1(some_work, buffer1, &work1_out, &mtx1);
+            std::thread other_work1(some_other_work, buffer1, &other_work1_out, &mtx1);
+            std::thread work2(some_work, buffer2, &work2_out, &mtx2);
+            std::thread other_work2(some_other_work, buffer2, &other_work2_out, &mtx2);
             
-            sum1.join();
-            sum2.join();
-            rand1.join();
-            rand2.join();
+            work1.join();
+            work2.join();
+            other_work1.join();
+            other_work2.join();
             
-            printf("%02x %02x %02x %02x\n", sum1_out, sum2_out, rand1_out, rand2_out);
+            printf("%02x %02x %02x %02x\n", work1_out, work2_out, other_work1_out, other_work2_out);
         }
         
         return 0;
     }
 
 
+
 Speed Difference
 ----------------
 
-Executing both programs with maximum GCC optimizations enabled resulted in start performance differences. The single mutex program executed in 1.432s, while the dual mutex program executed in 0.591 seconds.
+Executing both programs with maximum GCC optimizations enabled resulted in start performance differences. The single mutex program executed in 1.438s, while the dual mutex program executed in 0.510 seconds.
