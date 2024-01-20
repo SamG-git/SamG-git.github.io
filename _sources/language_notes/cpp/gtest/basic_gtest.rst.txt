@@ -1,0 +1,60 @@
+Basic ``gtest`` set-up
+======================
+
+Basic Function to Test 
+----------------------
+
+Before writing our first ``gtest`` executable we first need to create a basic function which can be tested. The following returns the sum of two provided integers:
+
+.. code-block:: C++
+
+    int add_ints(int input_1, int input_2){
+        return input_1 + input_2;
+    }
+
+We'll place this in the file ``example1.hh``.
+
+Creating the Unit Test
+----------------------
+
+To test this we should create a unit test file. This should include the ``example1.hh`` file so that it can call the ``add_ints`` function for testing. The following is an example unit test file
+
+.. code-block:: C++
+
+    #include "example1.hh"
+
+    #include <gtest/gtest.h>
+
+
+    TEST(integer_addition, Positive){
+        EXPECT_EQ(2, add_ints(1, 1));
+        EXPECT_EQ(100, add_ints(80, 20));
+        EXPECT_EQ(100, add_ints(20, 80));
+        EXPECT_EQ(32767, add_ints(0, 32767));
+    }
+
+    TEST(integer_addition, Negatives){
+        EXPECT_EQ(-2, add_ints(-1, -1));
+        EXPECT_EQ(-100, add_ints(-20, -80));
+        EXPECT_EQ(-100, add_ints(-80, -20));
+    }
+
+    int main(int argc, char** argv){
+        testing::InitGoogleTest();
+        return RUN_ALL_TESTS();
+    }
+
+We'll save this in a file called example1_test.cc. 
+
+Compiling the Unit Test 
+-----------------------
+
+Linking to ``gtest`` can be a bit of a challenge. As this tutorial is aimed at both host-computer and cross-compilation, we will statically link to the ``gtest`` binary that has been built previously. Run the following command to compile the unit test:
+
+.. code-block:: bash
+
+    g++ -pthread -o example1 example1_test.cc pasth/to/libgtest.a path/to/libgtest_main.a
+
+Note you may also need to add an include-path if the ``gtest`` header files are installed outside of your standard include path.
+
+The unit tests can now be run with ``./example1``.

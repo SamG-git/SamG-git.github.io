@@ -6,18 +6,18 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>C++ Notes &#8212; Sam G Notes</title>
-    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/basic_mod.css?v=0.7.0-1" />
-    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
-    <script src="../../_static/doctools.js"></script>
-    <script src="../../_static/sphinx_highlight.js"></script>
-    <script src="../../_static/js/theme.js"></script>
-    <script src="../../_static/js/petite-vue.js"></script>
-    <link rel="index" title="Index" href="../../genindex.html" />
-    <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="Smart Pointers" href="smart_pointers.html" />
-    <link rel="prev" title="Programming Language Notes" href="../language_notes.html" /> 
+    <title>GTest Notes &#8212; Sam G Notes</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/basic_mod.css?v=0.7.0-1" />
+    <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/sphinx_highlight.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <script src="../../../_static/js/petite-vue.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="Installing GTest" href="installing_gtest.html" />
+    <link rel="prev" title="Enforcing Thread Safety using clang" href="../threads/thread_safety_clang.html" /> 
   </head><body data-dark_mode_code_blocks="true">
 
 <div id="top_nav">
@@ -31,7 +31,7 @@
         <p id="toggle_sidebar">
             <a href="#" title="Toggle sidebar">|||</a>
         </p>
-        <h1><a href="../../index.html" title="Go to homepage">Sam G Notes</a></h1>
+        <h1><a href="../../../index.html" title="Go to homepage">Sam G Notes</a></h1>
 
         <a id="mode_toggle" href="#" @click.prevent="handleClick" :title="mode">
     <template v-if="mode == 'light'">
@@ -93,7 +93,7 @@
 })()
 </script>
             <p class="mobile_search_link">
-                <a href="../../search.html" title="Search">
+                <a href="../../../search.html" title="Search">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 65 64" fill-rule="evenodd" stroke-linejoin="round" stroke-miterlimit="2">
                         <path d="M14.873 40.009c-2.315-3.943-3.642-8.532-3.642-13.429C11.231 11.91 23.141 0 37.811 0s26.58 11.91 26.58 26.58-11.91 26.58-26.58 26.58a26.44 26.44 0 0 1-14.277-4.161L9.739 62.794a3.12 3.12 0 0 1-4.413 0L.913 58.382c-1.217-1.218-1.217-3.196 0-4.413l13.96-13.96zM37.811 8.054c10.225 0 18.526 8.301 18.526 18.526s-8.301 18.526-18.526 18.526-18.526-8.301-18.526-18.526S27.586 8.054 37.811 8.054z" fill="#fff" />
                     </svg>
@@ -106,7 +106,7 @@
 <div id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
-    <form class="search" action="../../search.html" method="get">
+    <form class="search" action="../../../search.html" method="get">
       <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
       <input type="submit" value="Go" />
     </form>
@@ -120,20 +120,20 @@
     
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper"><ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../../linux_gaming.html">Linux Gaming</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../embedded_notes.html">Embedded Notes</a></li>
-<li class="toctree-l1 current"><a class="reference internal" href="../language_notes.html">Programming Language Notes</a><ul class="current">
-<li class="toctree-l2 current"><a class="current reference internal" href="#">C++ Notes</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="smart_pointers.html">Smart Pointers</a></li>
-<li class="toctree-l3"><a class="reference internal" href="threads/threads.html">C++ Multithreading Notes</a></li>
-<li class="toctree-l3"><a class="reference internal" href="gtest/gtest.html">GTest Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../linux_gaming.html">Linux Gaming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../embedded_notes.html">Embedded Notes</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../language_notes.html">Programming Language Notes</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../cpp.html">C++ Notes</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../smart_pointers.html">Smart Pointers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../threads/threads.html">C++ Multithreading Notes</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">GTest Notes</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="../c/c.html">C Language Notes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../ADA/ada.html">ADA Language Notes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../c/c.html">C Language Notes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ADA/ada.html">ADA Language Notes</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../../Software/Software.html">Software Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Software/Software.html">Software Notes</a></li>
 </ul>
 
         </div>
@@ -145,22 +145,20 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <section id="c-notes">
-<h1>C++ Notes<a class="headerlink" href="#c-notes" title="Permalink to this heading">¶</a></h1>
+  <section id="gtest-notes">
+<h1>GTest Notes<a class="headerlink" href="#gtest-notes" title="Permalink to this heading">¶</a></h1>
 <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="smart_pointers.html">Smart Pointers</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="smart_pointers.html#unique-pointers">Unique Pointers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installing_gtest.html">Installing GTest</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installing_gtest.html#getting-gtest">Getting GTest</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installing_gtest.html#compiling-gtest-for-the-host-system">Compiling GTest for the host system</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installing_gtest.html#cross-compiling-gtest">Cross-Compiling GTest</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="threads/threads.html">C++ Multithreading Notes</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="threads/mutex_benchmarking.html">Benchmarking Global Mutexes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="threads/thread_safety_clang.html">Enforcing Thread Safety using <code class="docutils literal notranslate"><span class="pre">clang</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="gtest/gtest.html">GTest Notes</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="gtest/installing_gtest.html">Installing GTest</a></li>
-<li class="toctree-l2"><a class="reference internal" href="gtest/basic_gtest.html">Basic <code class="docutils literal notranslate"><span class="pre">gtest</span></code> set-up</a></li>
+<li class="toctree-l1"><a class="reference internal" href="basic_gtest.html">Basic <code class="docutils literal notranslate"><span class="pre">gtest</span></code> set-up</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="basic_gtest.html#basic-function-to-test">Basic Function to Test</a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic_gtest.html#creating-the-unit-test">Creating the Unit Test</a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic_gtest.html#compiling-the-unit-test">Compiling the Unit Test</a></li>
 </ul>
 </li>
 </ul>
@@ -180,14 +178,14 @@
         <div class="button_nav">
             <div class="left">
                 
-                <a href="../language_notes.html">
-                    <span class="icon">&lt;</span><span>Programming Language Notes</span></a>
+                <a href="../threads/thread_safety_clang.html">
+                    <span class="icon">&lt;</span><span>Enforcing Thread Safety using <code class="docutils literal notranslate"><span class="pre">clang</span></code></span></a>
                 
             </div>
 
             <div class="right">
                 
-                    <a href="smart_pointers.html"><span>Smart Pointers</span><span class="icon">&gt;</span></a>
+                    <a href="installing_gtest.html"><span>Installing GTest</span><span class="icon">&gt;</span></a>
                 
             </div>
         </div>

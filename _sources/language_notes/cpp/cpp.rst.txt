@@ -6,3 +6,4 @@ C++ Notes
 
     smart_pointers
     threads/threads
+    gtest/gtest

@@ -1,0 +1,63 @@
+Installing GTest
+================
+
+GTest is a C++ testing framework developed by google. It can either be installed from the package manager or compiled from source. This tutorial will show you how to install it from source.
+
+Getting GTest
+-------------
+
+Google open-source gtest `here <https://github.com/google/googletest>`_.
+
+Compiling GTest for the host system
+-----------------------------------
+
+Inside the googletest directory, create the build and install directory and enter the build directory using
+
+.. code-block:: bash
+
+    mkdir build
+    mkdir install
+    cd build
+
+Now configure the project and start compilation using:
+
+.. code-block:: bash
+
+    cmake ..
+    make
+
+Finally, install using
+
+.. code-block::bash
+    make install DESTDIR=../install/
+
+Cross-Compiling GTest
+---------------------
+
+To cross compile gtest you will need to make sure you have a clean copy of the source code. This can either be done by cloning a new version of the repository or by removing the ``build`` and ``install`` directories from your current copy.
+
+Once you have a clean copy of the source, create the build and install directories and enter the build directory using:
+
+.. code-block:: bash
+
+    mkdir build
+    mkdir install
+    cd build
+
+Now configure ``cmake`` to use your cross-compiler. In this case I will be using  ``arm-linux-gnueabi`` as my cross-compiler prefix.
+
+.. code-block:: bash
+
+    cmake .. -DCMAKE_C_COMPILER=arm-linux-gnueabi-gcc \
+             -DCMAKE_CXX_COMPILER=arm-linux-gnueabi-g++
+
+Now build and install gtest using
+
+.. code-block:: bash
+
+    make
+    make install DESTDIR=../install/
+
+
+
+
