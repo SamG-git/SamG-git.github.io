@@ -6,17 +6,18 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Welcome to Sam G’s Notes! &#8212; Sam G Notes</title>
-    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="_static/basic_mod.css?v=0.7.0-1" />
-    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-    <script src="_static/doctools.js"></script>
-    <script src="_static/sphinx_highlight.js"></script>
-    <script src="_static/js/theme.js"></script>
-    <script src="_static/js/petite-vue.js"></script>
-    <link rel="index" title="Index" href="genindex.html" />
-    <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Linux Gaming" href="linux_gaming.html" /> 
+    <title>Bravia 2 Development Board on Ubuntu 22.04 &#8212; Sam G Notes</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic_mod.css?v=0.7.0-1" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <script src="../_static/js/petite-vue.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Programming Language Notes" href="../language_notes/language_notes.html" />
+    <link rel="prev" title="Lattice FPGA Notes" href="lattice_fpga.html" /> 
   </head><body data-dark_mode_code_blocks="true">
 
 <div id="top_nav">
@@ -30,7 +31,7 @@
         <p id="toggle_sidebar">
             <a href="#" title="Toggle sidebar">|||</a>
         </p>
-        <h1><a href="#" title="Go to homepage">Sam G Notes</a></h1>
+        <h1><a href="../index.html" title="Go to homepage">Sam G Notes</a></h1>
 
         <a id="mode_toggle" href="#" @click.prevent="handleClick" :title="mode">
     <template v-if="mode == 'light'">
@@ -92,7 +93,7 @@
 })()
 </script>
             <p class="mobile_search_link">
-                <a href="search.html" title="Search">
+                <a href="../search.html" title="Search">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 65 64" fill-rule="evenodd" stroke-linejoin="round" stroke-miterlimit="2">
                         <path d="M14.873 40.009c-2.315-3.943-3.642-8.532-3.642-13.429C11.231 11.91 23.141 0 37.811 0s26.58 11.91 26.58 26.58-11.91 26.58-26.58 26.58a26.44 26.44 0 0 1-14.277-4.161L9.739 62.794a3.12 3.12 0 0 1-4.413 0L.913 58.382c-1.217-1.218-1.217-3.196 0-4.413l13.96-13.96zM37.811 8.054c10.225 0 18.526 8.301 18.526 18.526s-8.301 18.526-18.526 18.526-18.526-8.301-18.526-18.526S27.586 8.054 37.811 8.054z" fill="#fff" />
                     </svg>
@@ -105,7 +106,7 @@
 <div id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
-    <form class="search" action="search.html" method="get">
+    <form class="search" action="../search.html" method="get">
       <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
       <input type="submit" value="Go" />
     </form>
@@ -118,11 +119,20 @@
 
     
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper"><ul>
-<li class="toctree-l1"><a class="reference internal" href="linux_gaming.html">Linux Gaming</a></li>
-<li class="toctree-l1"><a class="reference internal" href="embedded_notes.html">Embedded Notes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="language_notes/language_notes.html">Programming Language Notes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="Software/Software.html">Software Notes</a></li>
+        <div class="sphinxsidebarwrapper"><ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../linux_gaming.html">Linux Gaming</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../embedded_notes.html">Embedded Notes</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../rp2040/rp2040_notes.html">RP2040 Notes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../basic_unit_test_library.html">Basic Unit Test Library</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../msp430/msp430_notes.html">MSP430 Notes</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="lattice_fpga.html">Lattice FPGA Notes</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Bravia 2 Development Board on Ubuntu 22.04</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../language_notes/language_notes.html">Programming Language Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Software/Software.html">Software Notes</a></li>
 </ul>
 
         </div>
@@ -134,46 +144,41 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <section id="welcome-to-sam-g-s-notes">
-<h1>Welcome to Sam G’s Notes!<a class="headerlink" href="#welcome-to-sam-g-s-notes" title="Permalink to this heading">¶</a></h1>
-<div class="toctree-wrapper compound">
-</div>
-<section id="quick-links">
-<h2>Quick Links<a class="headerlink" href="#quick-links" title="Permalink to this heading">¶</a></h2>
-<div class="toctree-wrapper compound">
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="linux_gaming.html">Linux Gaming</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="ac_valhalla.html">Running AC Valhalla Using Proton</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="embedded_notes.html">Embedded Notes</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="rp2040/rp2040_notes.html">RP2040 Notes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="basic_unit_test_library.html">Basic Unit Test Library</a></li>
-<li class="toctree-l2"><a class="reference internal" href="msp430/msp430_notes.html">MSP430 Notes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="lattice_fpga/lattice_fpga.html">Lattice FPGA Notes</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="language_notes/language_notes.html">Programming Language Notes</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="language_notes/cpp/cpp.html">C++ Notes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="language_notes/c/c.html">C Language Notes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="language_notes/ADA/ada.html">ADA Language Notes</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="Software/Software.html">Software Notes</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="Software/gns3.html">GNS3 Notes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Software/opencl.html">OpenCL Notes</a></li>
-</ul>
-</li>
-</ul>
-</div>
+  <section id="bravia-2-development-board-on-ubuntu-22-04">
+<h1>Bravia 2 Development Board on Ubuntu 22.04<a class="headerlink" href="#bravia-2-development-board-on-ubuntu-22-04" title="Permalink to this heading">¶</a></h1>
+<section id="diamond-installation">
+<h2>Diamond Installation<a class="headerlink" href="#diamond-installation" title="Permalink to this heading">¶</a></h2>
+<p>To get Diamond, you first need to get an account with Lattice Semiconductor.
+This will allow you to Download the software, ut you need to wait about 2 days
+for your account to be verified before you can also download the free license.</p>
+<p>When you have the license downloaded, go to the Diamond download page and grab
+the latest .rpm version. This is over 1GB in size so it may take some time to
+download. Once downloaded, install <code class="docutils literal notranslate"><span class="pre">alien</span></code> using:</p>
+<p><code class="docutils literal notranslate"><span class="pre">sudo</span> <span class="pre">apt</span> <span class="pre">install</span> <span class="pre">alien</span></code></p>
+<p>Now, convert the rpm file using:</p>
+<p><code class="docutils literal notranslate"><span class="pre">sudo</span> <span class="pre">alien</span> <span class="pre">--scripts</span> <span class="pre">~/Downloads/diamond.....rpm</span></code></p>
+<p>You can now install Diamond using:</p>
+<p><code class="docutils literal notranslate"><span class="pre">sudo</span> <span class="pre">apt</span> <span class="pre">install</span> <span class="pre">./Downloads/diamond.......deb</span></code></p>
+<p>Before Diamond can be launched its sole dependency needs to be installed:</p>
+<p><code class="docutils literal notranslate"><span class="pre">sudo</span> <span class="pre">apt</span> <span class="pre">install</span> <span class="pre">lsb</span></code></p>
+<p>Furthermore, some modifications to the license file are required. First, change
+the string <code class="docutils literal notranslate"><span class="pre">daemon_path</span></code> to your systems hostname. Finally, change the
+string <code class="docutils literal notranslate"><span class="pre">path_to_mgcld</span></code> to <code class="docutils literal notranslate"><span class="pre">/usr/local/diamond/3.13/modeltech/linuxloem</span></code>.</p>
+<p>Now, launch the license server using:</p>
+<p><code class="docutils literal notranslate"><span class="pre">/usr/local/diamond/VERSION/ispfpga/bin/lin64/lmgrd</span> <span class="pre">-l</span> <span class="pre">/usr/local/diamond/VERSION/license/license.log</span> <span class="pre">-c</span> <span class="pre">/usr/local/diamond/VERSION/license/license.dat</span></code></p>
+<p>In a separate terminal, launch Diamond using:</p>
+<p><code class="docutils literal notranslate"><span class="pre">/usr/local/diamond/VERSION/bin/lin64/diamond</span></code></p>
 </section>
-<section id="indices-and-tables">
-<h2>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this heading">¶</a></h2>
-<ul class="simple">
-<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
-<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
-<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
-</ul>
+<section id="building-the-demo-project">
+<h2>Building the Demo Project<a class="headerlink" href="#building-the-demo-project" title="Permalink to this heading">¶</a></h2>
+<p>First, download the demo project from the Lattice Bravia2 web-page. The project
+comes with a number of issues which need to be fixed before it can be built.</p>
+<p>First, rename the file <code class="docutils literal notranslate"><span class="pre">demo_latticexp2_brevia_soc.lpf</span></code> in <code class="docutils literal notranslate"><span class="pre">project</span></code> to
+<code class="docutils literal notranslate"><span class="pre">Demo_latticexp2_brevia_soc.lpf</span></code>. Second, rename all the top level folders to
+start with a lower case letter.</p>
+<p>Now you can import the project into Diamond and it should work. To build the
+project, click on the Process tab on the left-hand-side and double click on
+synthesize</p>
 </section>
 </section>
 
@@ -191,9 +196,9 @@
             <p><a class="toggle_right_sidebar" href="#"><span class="icon">&gt;</span><span>Page contents:<span></a></p>
             <div class="page_toc">
                 <ul>
-<li><a class="reference internal" href="#">Welcome to Sam G’s Notes!</a><ul>
-<li><a class="reference internal" href="#quick-links">Quick Links</a></li>
-<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+<li><a class="reference internal" href="#">Bravia 2 Development Board on Ubuntu 22.04</a><ul>
+<li><a class="reference internal" href="#diamond-installation">Diamond Installation</a></li>
+<li><a class="reference internal" href="#building-the-demo-project">Building the Demo Project</a></li>
 </ul>
 </li>
 </ul>
@@ -208,11 +213,14 @@
         <div class="button_nav">
             <div class="left">
                 
+                <a href="lattice_fpga.html">
+                    <span class="icon">&lt;</span><span>Lattice FPGA Notes</span></a>
+                
             </div>
 
             <div class="right">
                 
-                    <a href="linux_gaming.html"><span>Linux Gaming</span><span class="icon">&gt;</span></a>
+                    <a href="../language_notes/language_notes.html"><span>Programming Language Notes</span><span class="icon">&gt;</span></a>
                 
             </div>
         </div>

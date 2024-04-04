@@ -1,0 +1,53 @@
+Bravia 2 Development Board on Ubuntu 22.04
+==========================================
+
+Diamond Installation
+--------------------
+
+To get Diamond, you first need to get an account with Lattice Semiconductor.
+This will allow you to Download the software, ut you need to wait about 2 days
+for your account to be verified before you can also download the free license.
+
+When you have the license downloaded, go to the Diamond download page and grab
+the latest .rpm version. This is over 1GB in size so it may take some time to
+download. Once downloaded, install ``alien`` using:
+
+``sudo apt install alien``
+
+Now, convert the rpm file using:
+
+``sudo alien --scripts ~/Downloads/diamond.....rpm``
+
+You can now install Diamond using:
+
+``sudo apt install ./Downloads/diamond.......deb``
+
+Before Diamond can be launched its sole dependency needs to be installed:
+
+``sudo apt install lsb``
+
+Furthermore, some modifications to the license file are required. First, change
+the string ``daemon_path`` to your systems hostname. Finally, change the 
+string ``path_to_mgcld`` to ``/usr/local/diamond/3.13/modeltech/linuxloem``. 
+
+Now, launch the license server using:
+
+``/usr/local/diamond/VERSION/ispfpga/bin/lin64/lmgrd -l /usr/local/diamond/VERSION/license/license.log -c /usr/local/diamond/VERSION/license/license.dat``
+
+In a separate terminal, launch Diamond using:
+
+``/usr/local/diamond/VERSION/bin/lin64/diamond``
+
+Building the Demo Project
+-------------------------
+
+First, download the demo project from the Lattice Bravia2 web-page. The project
+comes with a number of issues which need to be fixed before it can be built.
+
+First, rename the file ``demo_latticexp2_brevia_soc.lpf`` in ``project`` to
+``Demo_latticexp2_brevia_soc.lpf``. Second, rename all the top level folders to
+start with a lower case letter. 
+
+Now you can import the project into Diamond and it should work. To build the
+project, click on the Process tab on the left-hand-side and double click on
+synthesize
