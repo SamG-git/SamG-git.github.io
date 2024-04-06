@@ -1,0 +1,74 @@
+Brevia2 Simple Led Counter
+==========================
+
+Once you've happy with the example project for the Brevia2 you can move on to 
+creating a simple project of your own. Here I will describe how to create a 
+simple counter on the LEDs.
+
+First, in Lattice Diamond, create a new project. Make sure to import the
+constraints file (Demo_LatticeXP2_Brevia_SoC.lpf), checking the box to copy it 
+to your new project. You'll also need to enter the target device 
+(LFXP2-5E-5TN144C) and select SynplifyPro as the synthesis tool. 
+
+Once the project is created, right click on Input Files and select "add" and 
+then "new file". Select "VHDL Files" from the list and create the file. Copy and
+paste the following code into that file:
+
+.. code-block:: vhdl
+
+    library ieee;
+    use ieee.std_logic_1164.all;
+    use ieee.std_logic_arith.all;
+    use ieee.std_logic_unsigned.all;   
+
+    entity light_counter is
+    port(
+    clk_in    : in    std_logic;                    
+    rst_n     : in    std_logic;                    
+    sw        : in    std_logic_vector(7 downto 0);             
+    led       : out   std_logic_vector(7 downto 0);  
+    sram_data : inout std_logic_vector(7 downto 0);
+    sram_addr : out   std_logic_vector(16 downto 0); 
+    sram_cen  : out   std_logic;                   
+    sram_oen  : out   std_logic;                   
+    sram_wen  : out   std_logic;                   
+    uart_rx   : in    std_logic;             
+    uart_tx   : out   std_logic;                
+    spi_sclk  : out   std_logic;                
+    spi_csn   : out   std_logic;                
+    spi_mosi  : out   std_logic;                
+    spi_miso  : in    std_logic;                
+    wn        : out   std_logic;                
+    holdn     : out   std_logic                 
+    );
+    end;
+
+    architecture rtl of light_counter is
+
+        signal counter : unsigned(30 - 1 downto 0);
+        
+    begin
+        
+        counter_p : process(clk_in)
+        begin
+            if rising_edge(clk_in)
+            then
+                counter <= counter + 1;
+            end if;		
+        end process;
+        
+        -- Not required as LEDs are active low.
+        led <= not std_logic_vector(counter(30 - 1 downto 23 - 1));
+        
+    end;
+
+Now, in the Process view, check the "JDEC File" box and double-click on "Export 
+Files". This will synthesize and build the project. 
+
+While the bitstream has been built, we still can't flash it to the device. To do
+this, first right click on "Programming Files" in the File List view, selecting 
+"add" and "new file". Then click on "Other Files" and select the "Programmer 
+Project File", before giving it a name and clicking new. On some systems this 
+may take a while. Once the file has been create, double click on it in the file 
+view to open up the programmer. You can now flash the project to the device just
+like the demo!
