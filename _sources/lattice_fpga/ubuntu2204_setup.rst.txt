@@ -38,6 +38,59 @@ In a separate terminal, launch Diamond using:
 
 ``/usr/local/diamond/VERSION/bin/lin64/diamond``
 
+You can combine these together in a BASH script:
+
+.. code-block:: bash
+    
+    #!/bin/bash
+
+    # Start the license server
+    /usr/local/diamond/VERSION/ispfpga/bin/lin64/lmgrd -c /usr/local/diamond/3.13/license/license.dat
+
+    # Launch Diamond
+    /usr/local/diamond/VERSION/bin/lin64/diamond
+
+Fixing the USB Drivers
+~~~~~~~~~~~~~~~~~~~~~~
+
+By default, the JTAG programmer on the Brevia2 development board gets assigned
+a tty connection (usually ``/dev/ttyUSB0``). This will prevent Lattice from
+programming the device and instead display the warning message:
+
+``ERROR - Failed to Open FTDI USB port``
+
+To fix this you need to disconnect the JTAG programmer from the FTDI driver
+provided by the Linux Kernel. First, unplug your dev-board and run 
+
+.. code-block:: bash
+
+    tree /sys/bus/usb/drivers/ftdi_sio/
+
+This will show which devices are connected to the driver which you don't want to
+disconnect. Now, run the same command again but with the device plugged in. You
+should get something like this:
+
+.. code-block:: bash
+
+    $ tree /sys/bus/usb/drivers/ftdi_sio/
+    /sys/bus/usb/drivers/ftdi_sio/
+    ├── 1-4:1.0 -> ../../../../devices/pci0000:00/0000:00:01.2/0000:02:00.0/usb1/1-4/1-4:1.0
+    ├── 1-4:1.1 -> ../../../../devices/pci0000:00/0000:00:01.2/0000:02:00.0/usb1/1-4/1-4:1.1
+    ├── bind
+    ├── module -> ../../../../module/usbserial
+    ├── uevent
+    └── unbind
+
+In this case, the dev-board is presenting as ``1-4:1.X``, but this may be 
+different on your system. The ``.0`` device is the JTAG programmer and the 
+``.1`` device is the UART output. Finally, run the following command to unbind
+the JTAG programmer from the driver:
+
+.. code-block:: bash
+
+    echo -n "1-4:1.0" | sudo tee /sys/bus/usb/drivers/ftdi_sio/unbind
+
+
 Building the Demo Project
 -------------------------
 
@@ -50,4 +103,10 @@ start with a lower case letter.
 
 Now you can import the project into Diamond and it should work. To build the
 project, click on the Process tab on the left-hand-side and double click on
-synthesize
+synthesize. 
+
+To program the board, open the File List view and double click on the ``.xcf`` 
+file under "Programming Files". This will take a while, but eventually the 
+Programmer will open. Next, click on "Detect Cable" and select port 0. Finally, 
+click on the Program button. This will bring up a pop-up while the system is 
+being flashed.

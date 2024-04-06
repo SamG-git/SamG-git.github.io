@@ -168,6 +168,48 @@ string <code class="docutils literal notranslate"><span class="pre">path_to_mgcl
 <p><code class="docutils literal notranslate"><span class="pre">/usr/local/diamond/VERSION/ispfpga/bin/lin64/lmgrd</span> <span class="pre">-l</span> <span class="pre">/usr/local/diamond/VERSION/license/license.log</span> <span class="pre">-c</span> <span class="pre">/usr/local/diamond/VERSION/license/license.dat</span></code></p>
 <p>In a separate terminal, launch Diamond using:</p>
 <p><code class="docutils literal notranslate"><span class="pre">/usr/local/diamond/VERSION/bin/lin64/diamond</span></code></p>
+<p>You can combine these together in a BASH script:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="ch">#!/bin/bash</span>
+
+<span class="c1"># Start the license server</span>
+/usr/local/diamond/VERSION/ispfpga/bin/lin64/lmgrd<span class="w"> </span>-c<span class="w"> </span>/usr/local/diamond/3.13/license/license.dat
+
+<span class="c1"># Launch Diamond</span>
+/usr/local/diamond/VERSION/bin/lin64/diamond
+</pre></div>
+</div>
+<section id="fixing-the-usb-drivers">
+<h3>Fixing the USB Drivers<a class="headerlink" href="#fixing-the-usb-drivers" title="Permalink to this heading">¶</a></h3>
+<p>By default, the JTAG programmer on the Brevia2 development board gets assigned
+a tty connection (usually <code class="docutils literal notranslate"><span class="pre">/dev/ttyUSB0</span></code>). This will prevent Lattice from
+programming the device and instead display the warning message:</p>
+<p><code class="docutils literal notranslate"><span class="pre">ERROR</span> <span class="pre">-</span> <span class="pre">Failed</span> <span class="pre">to</span> <span class="pre">Open</span> <span class="pre">FTDI</span> <span class="pre">USB</span> <span class="pre">port</span></code></p>
+<p>To fix this you need to disconnect the JTAG programmer from the FTDI driver
+provided by the Linux Kernel. First, unplug your dev-board and run</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>tree<span class="w"> </span>/sys/bus/usb/drivers/ftdi_sio/
+</pre></div>
+</div>
+<p>This will show which devices are connected to the driver which you don’t want to
+disconnect. Now, run the same command again but with the device plugged in. You
+should get something like this:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>tree<span class="w"> </span>/sys/bus/usb/drivers/ftdi_sio/
+/sys/bus/usb/drivers/ftdi_sio/
+├──<span class="w"> </span><span class="m">1</span>-4:1.0<span class="w"> </span>-&gt;<span class="w"> </span>../../../../devices/pci0000:00/0000:00:01.2/0000:02:00.0/usb1/1-4/1-4:1.0
+├──<span class="w"> </span><span class="m">1</span>-4:1.1<span class="w"> </span>-&gt;<span class="w"> </span>../../../../devices/pci0000:00/0000:00:01.2/0000:02:00.0/usb1/1-4/1-4:1.1
+├──<span class="w"> </span><span class="nb">bind</span>
+├──<span class="w"> </span>module<span class="w"> </span>-&gt;<span class="w"> </span>../../../../module/usbserial
+├──<span class="w"> </span>uevent
+└──<span class="w"> </span>unbind
+</pre></div>
+</div>
+<p>In this case, the dev-board is presenting as <code class="docutils literal notranslate"><span class="pre">1-4:1.X</span></code>, but this may be
+different on your system. The <code class="docutils literal notranslate"><span class="pre">.0</span></code> device is the JTAG programmer and the
+<code class="docutils literal notranslate"><span class="pre">.1</span></code> device is the UART output. Finally, run the following command to unbind
+the JTAG programmer from the driver:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">echo</span><span class="w"> </span>-n<span class="w"> </span><span class="s2">&quot;1-4:1.0&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>/sys/bus/usb/drivers/ftdi_sio/unbind
+</pre></div>
+</div>
+</section>
 </section>
 <section id="building-the-demo-project">
 <h2>Building the Demo Project<a class="headerlink" href="#building-the-demo-project" title="Permalink to this heading">¶</a></h2>
@@ -178,7 +220,12 @@ comes with a number of issues which need to be fixed before it can be built.</p>
 start with a lower case letter.</p>
 <p>Now you can import the project into Diamond and it should work. To build the
 project, click on the Process tab on the left-hand-side and double click on
-synthesize</p>
+synthesize.</p>
+<p>To program the board, open the File List view and double click on the <code class="docutils literal notranslate"><span class="pre">.xcf</span></code>
+file under “Programming Files”. This will take a while, but eventually the
+Programmer will open. Next, click on “Detect Cable” and select port 0. Finally,
+click on the Program button. This will bring up a pop-up while the system is
+being flashed.</p>
 </section>
 </section>
 
@@ -197,7 +244,10 @@ synthesize</p>
             <div class="page_toc">
                 <ul>
 <li><a class="reference internal" href="#">Bravia 2 Development Board on Ubuntu 22.04</a><ul>
-<li><a class="reference internal" href="#diamond-installation">Diamond Installation</a></li>
+<li><a class="reference internal" href="#diamond-installation">Diamond Installation</a><ul>
+<li><a class="reference internal" href="#fixing-the-usb-drivers">Fixing the USB Drivers</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#building-the-demo-project">Building the Demo Project</a></li>
 </ul>
 </li>
