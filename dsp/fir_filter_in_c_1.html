@@ -17,6 +17,7 @@
     <script src="../_static/js/petite-vue.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Writing a Basic FIR Filter in C (2)" href="fir_filter_in_c_2.html" />
     <link rel="prev" title="DSP Notes" href="dsp.html" /> 
   </head><body data-dark_mode_code_blocks="true">
 
@@ -126,6 +127,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../Software/Software.html">Software Notes</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="dsp.html">DSP Notes</a><ul class="current">
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Writing a Basic FIR Filter in C (1)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fir_filter_in_c_2.html">Writing a Basic FIR Filter in C (2)</a></li>
 </ul>
 </li>
 </ul>
@@ -147,7 +149,7 @@
 convolution between the input array and a set of taps which represent the
 impulse response of the filter. This can be implemented using a series of dot
 products between the tap vector and a vector consisting of the current input
-sample and those which cane immediately before it.</p>
+sample and those which came immediately before it.</p>
 <div class="math notranslate nohighlight">
 \[y_n = \sum_{N=0}^{N-1} x_{n-N} * b_N\]</div>
 <p>where <span class="math notranslate nohighlight">\(y\)</span> is the output array, <span class="math notranslate nohighlight">\(x\)</span> is the input array, <span class="math notranslate nohighlight">\(b\)</span> is
@@ -160,10 +162,10 @@ will choose the zero assumption method as this gives us the same number of
 output samples as input.</p>
 </section>
 <section id="basic-fir-filter">
-<h2>Basic Fir Filter<a class="headerlink" href="#basic-fir-filter" title="Permalink to this heading">¶</a></h2>
+<h2>Basic FIR Filter<a class="headerlink" href="#basic-fir-filter" title="Permalink to this heading">¶</a></h2>
 <p>We will first create an unoptimised FIR filter which cab be called multiple
 times as data comes in, with memory of the previous samples. This will require
-4 functions, one to initialize the required memory, one to apply the fir filter,
+4 functions, one to initialize the required memory, one to apply the FIR filter,
 one to reset the memory in the case of a discontinuity in the received data, and
 one to free all the filter memory. To pass pass around this memory we will first
 declare the following structure:</p>
@@ -282,7 +284,7 @@ to our code - these will be covered in part 2.</p>
                 <ul>
 <li><a class="reference internal" href="#">Writing a Basic FIR Filter in C (1)</a><ul>
 <li><a class="reference internal" href="#introduction">Introduction</a></li>
-<li><a class="reference internal" href="#basic-fir-filter">Basic Fir Filter</a></li>
+<li><a class="reference internal" href="#basic-fir-filter">Basic FIR Filter</a></li>
 <li><a class="reference internal" href="#conclusion">Conclusion</a></li>
 </ul>
 </li>
@@ -304,6 +306,8 @@ to our code - these will be covered in part 2.</p>
             </div>
 
             <div class="right">
+                
+                    <a href="fir_filter_in_c_2.html"><span>Writing a Basic FIR Filter in C (2)</span><span class="icon">&gt;</span></a>
                 
             </div>
         </div>

@@ -8,7 +8,7 @@ A FIR (Finite Impulse Response) filter is mathematically identical to a
 convolution between the input array and a set of taps which represent the 
 impulse response of the filter. This can be implemented using a series of dot 
 products between the tap vector and a vector consisting of the current input
-sample and those which cane immediately before it.
+sample and those which came immediately before it.
 
 .. math::
 
@@ -24,12 +24,12 @@ or we can start our calculation at the :math:`N^{th}` sample. For this example w
 will choose the zero assumption method as this gives us the same number of 
 output samples as input.
 
-Basic Fir Filter
+Basic FIR Filter
 ----------------
 
 We will first create an unoptimised FIR filter which cab be called multiple 
 times as data comes in, with memory of the previous samples. This will require 
-4 functions, one to initialize the required memory, one to apply the fir filter, 
+4 functions, one to initialize the required memory, one to apply the FIR filter, 
 one to reset the memory in the case of a discontinuity in the received data, and
 one to free all the filter memory. To pass pass around this memory we will first
 declare the following structure:
