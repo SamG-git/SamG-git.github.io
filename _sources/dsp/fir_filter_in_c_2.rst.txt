@@ -1,0 +1,228 @@
+Writing a Basic FIR Filter in C (2)
+===================================
+
+Introduction
+------------
+
+In the previous article on writing a FIR filter in C I mentioned that there were 
+a few optimizations which could be made to the code. In this section I will 
+discuss these and who how the code can be improved.
+
+Speed optimizations
+-------------------
+
+The biggest flaw with the previous implementation is the shifting of the 
+:code:`buffer` array in the :code:`FIR_Stream_Mem` struct after every sample is 
+processed. This is done by re-writing every element of the buffer, as shown in 
+the following table:
+
+.. list-table:: Changes to :code:`FIR_Stream_Mem->buffer` 
+    :header-rows: 1
+    :widths: 3 25
+
+    * - Sample
+      - :code:`buffer` Contents 
+    * - N 
+      - 7 6 5 4 3 2 1 0
+    * - N + 1
+      - 8 7 6 5 4 3 2 1
+    * - N + 2
+      - 9 8 7 6 5 4 3 2
+
+This means that we are doing :code:`FIR_Stream_Mem->tap_len` writes to memory in 
+order to update the buffer. However, only one of the values in :code:`buffer` 
+has actually changed, the others have just shifted position. By changing the 
+start position of the buffer, we can reduce the number of writes to only one 
+per sample. The table below shows this in action, where the bolded positions are
+the start of the array.
+
+.. list-table:: Optimized :code:`FIR_Stream_Mem->buffer` memory layout
+    :header-rows: 1
+    :widths: 3 25
+
+    * - Sample
+      - :code:`buffer` Contents
+    * - N 
+      - **7** 6 5 4 3 2 1 0
+    * - N + 1
+      - 7 6 5 4 3 2 1 **8**
+    * - N + 2
+      - 7 6 5 4 3 2 **9** 8
+
+To implement this method we first need to modify the :code:`FIR_Stream_Mem` 
+struct to record the starting position of :code:`buffer` : 
+
+.. code:: C 
+
+    typedef struct FIR_Stream_Mem {
+        size_t tap_len;
+        double *taps;
+        double *buffer;
+        size_t buffer_start;
+    } FIR_Stream_Mem; 
+
+The :code:`buffer_start` value should also be initialized to 0 in 
+:code:`init_fir_stream`:
+
+.. code:: C 
+
+    FIR_Stream_Mem *init_fir_stream(double* taps, size_t tap_len){
+        /* Create the output object in memory */
+        FIR_Stream_Mem *output = (FIR_Stream_Mem*)(malloc(sizeof(FIR_Stream_Mem)));
+
+        /* Copy the taps across */
+        output->tap_len = tap_len;
+        output->taps = (double*)(malloc(sizeof(double) * tap_len));
+        memcpy(output->taps, taps, tap_len * sizeof(double));
+
+        /* Set the buffer to all zeros */
+        output->buffer = (double*)(malloc(sizeof(double) * tap_len));
+        memset(output->buffer, 0x00, tap_len * sizeof(double));
+
+        /* Set the buffer start position to 0 */
+        output->buffer_start = 0;
+
+        return output;
+    }
+
+Finally, we need to modify :code:`apply_fft` to loop index and update 
+:code:`buffer` correctly. We loop though :code:`buffer` when applying the filter
+taps, so we make out first mod here. Rather than using the for-loop index, we 
+calculate our own index using the following algorithm:
+
+.. code:: C 
+
+    size_t idx;
+            
+    if(mem->buffer_start + j < mem->tap_len){
+        idx = mem->buffer_start + j;
+    } else {
+        idx = mem->buffer_start + j - mem->tap_len;
+    }
+
+This ensures we don't get an out-of-bounds error by looping the index back to 
+the start if it will otherwise overrun.
+
+We also need to ensure that :code:`buffer` gets updated correctly. This is done 
+by setting the value at :code:`buffer_start` to be our current input sample, 
+then subtracting one from :code:`buffer_start`. We again avoid an overrun by 
+checking if :code:`buffer_start` is 0, in which case we set :code:`buffer_start`
+to be the last element in the array. This is done using the following code:
+
+.. code:: C 
+
+    mem->buffer[mem->buffer_start] = input[i];
+    if(mem->buffer_start == 0){
+        mem->buffer_start = mem->tap_len - 1;
+    } else {
+        mem->buffer_start--;
+    }
+
+This gives a final :code:`apply_fft` function of:
+
+.. code:: C 
+
+    void apply_fir(FIR_Stream_Mem *mem, const double *input, double *output, size_t size){
+        /* Loop through all input samples */
+        for(size_t i = 0; i < size; i++){
+            /* Calculate first output sample */
+            double sample_output = input[i] * mem->taps[0];
+
+            /* Loop through all the taps */
+            for(size_t j = 1; j < mem->tap_len; j++){
+                size_t idx;
+                
+                if(mem->buffer_start + j < mem->tap_len){
+                    idx = mem->buffer_start + j;
+                } else {
+                    idx = mem->buffer_start + j - mem->tap_len;
+                }
+
+                sample_output += mem->buffer[idx] * mem->taps[j];
+            }
+
+            /* Update buffer */
+            mem->buffer[mem->buffer_start] = input[i];
+            if(mem->buffer_start == 0){
+                mem->buffer_start = mem->tap_len - 1;
+            } else {
+                mem->buffer_start--;
+            }
+
+            output[i] = sample_output;
+        }
+    }
+
+Speed Boost
+~~~~~~~~~~~
+
+Modern compilers are pretty good at optimizing the code given to them, so does 
+this modification actually give a noticeable speed increase? To test this we can
+use the following function which calls :code:`apply_fft` 1,000,000 times and 
+compare the execution times between the two implementations: 
+
+.. code:: C 
+
+    #include <stdio.h>
+    #include <stdlib.h>
+    #include <time.h>
+    #include <assert.h>
+
+    #include "fir_filter.h"
+
+    static double randfrom(double min, double max){
+        double range = max - min;
+        double div = RAND_MAX / range;
+        return min + (rand() / div);
+    }
+
+    int main(){
+        /* Seed random number generator */
+        srand(time(NULL));
+
+        /* Create some random input data */
+        double data[1024];
+
+        for(size_t i = 0; i < 1024; i++){
+            data[i] = randfrom(-1.0, 1.0);
+        }
+
+        /* Create random taps */
+        double taps[8] = {1, 2, 3, 4, 4, 3, 2, 1};
+
+        /* Init fir filter */
+        FIR_Stream_Mem *fir_filter = init_fir_stream(taps, 8);
+
+        /* Filter data */
+        double output[1024];
+        for(size_t i = 0; i < 1000000; i++){
+            apply_fir(fir_filter, data, output, 1024);
+        }
+
+        /* Deallocate the FIR memory */
+        deinit_fir(fir_filter);
+    }
+
+Running the code with the unoptimized :code:`apply_fft` took 25.936 seconds, 
+whereas the optimized version took only 22.511 seconds. 
+
+Memory optimizations
+--------------------
+
+As modern computers have a lot of memory I have not experimented with the 
+possible memory optimizations which could be made to this code. However, there 
+are two changes which could be made. The first is that the 
+:code:`init_fir_stream` function could store the pointer its given to 
+:code:`taps` rather than making a copy. This would reduce the memory footprint 
+of the FIR filter at the expense of thread safety in multithreaded programs. 
+Secondly, the :code:`buffer` element in :code:`FIR_Stream_Mem` is currently one 
+byte longer than it needs to be - the final element is never used as part of 
+the filter. This could be fixed, but it would make the indexing in 
+:code:`apply_fft` a bit more complicated.
+
+Conclusion
+----------
+
+We have explored ways in which the FIR filter implementation can be optimized 
+for both speed and memory usage. In the next section we will look at extending 
+the filter to integer and complex data types.
