@@ -1,0 +1,109 @@
+Writing a Basic FIR Filter in C
+===============================
+
+Introduction
+------------
+
+A FIR (Finite Impulse Response) filter is mathematically identical to a 
+convolution between the input array and a set of taps which represent the 
+impulse response of the filter. This can be implemented using a series of dot 
+products between the tap vector and a vector consisting of the current input
+sample and those which cane immediately before it.
+
+.. math::
+
+    y_n = \sum_{N=0}^{N-1} x_{n-N} * b_N
+
+where :math:`y` is the output array, :math:`x` is the input array, :math:`b` is 
+the array of taps and :math:`N` is the number of taps.
+
+When implementing this in code we need to decide how to treat the first 
+:math:`N` samples as we have no indication of what data should come before them. 
+We can take one of two methods, either we can assume all previous samples are 0 
+or we can start our calculation at the :math:`N^{th}` sample. For this example we 
+will choose the zero assumption method as this gives us the same number of 
+output samples as input.
+
+Basic Fir Filter
+----------------
+
+We will first create an unoptimised FIR filter which cab be called multiple 
+times as data comes in, with memory of the previous samples. This will require 
+4 functions, one to initialize the required memory, one to apply the fir filter, 
+one to reset the memory in the case of a discontinuity in the received data, and
+one to free all the filter memory. To pass pass around this memory we will first
+declare the following structure:
+
+.. code:: C
+
+    typedef struct FIR_Stream_Mem {
+        size_t tap_len;
+        double *taps;
+        double *buffer;
+    } FIR_Stream_Mem;
+
+The :code:`tap_len` field contains the number of taps stored in the :code:`taps`
+array. :code:`buffer` will contain the previous samples and will also have size 
+:code:`tap_len`. We will allocate and populate this structure using the 
+following function:
+
+.. code:: C
+
+    FIR_Stream_Mem *init_fir_stream(double* taps, size_t tap_len){
+        /* Create the output object in memory */
+        FIR_Stream_Mem *output = (FIR_Stream_Mem*)(malloc(sizeof(FIR_Stream_Mem)));
+
+        /* Copy the taps across */
+        output->tap_len = tap_len;
+        output->taps = (double*)(malloc(sizeof(double) * tap_len));
+        memcpy(output->taps, taps, tap_len * sizeof(double));
+
+        /* Set the buffer to all zeros */
+        output->buffer = (double*)(malloc(sizeof(double) * tap_len));
+        memset(output->buffer, 0x00, tap_len * sizeof(double));
+
+        return output;
+    }
+
+This first allocates the memory to store the :code:`FIR_Stream_Mem` structure 
+itself, before allocating memory for the buffer and taps. The taps are copied 
+over from the input to allow for the structure to be passed around more easily, 
+and the buffer is set to all zeros as discussed above.
+
+We are now ready to start using the FIR filter. To do this, we need to implement
+the algorithm so it can be run on our data. We will use the following function: 
+
+.. code:: C 
+
+    void apply_fir(FIR_Stream_Mem *mem, const double *input, double *output, size_t size){
+        /* Loop through all input samples */
+        for(size_t i = 0; i < size; i++){
+            /* Calculate first output sample */
+            double sample_output = input[i] * mem->taps[0];
+
+            /* Loop through all the taps */
+            for(size_t j = 1; j < mem->tap_len; j++){
+                sample_output += mem->buffer[j] * mem->taps[j];
+            }
+
+            /* Update buffer */
+            for(size_t j = mem->tap_len - 2; j > 0; j--){
+                mem->buffer[j + 1] = mem->buffer[j];
+            }
+            mem->buffer[1] = input[i];
+            output[i] = sample_output;
+        }
+    }
+
+This has the following arguments:
+
+* :code:`mem` : A pointer to the :code:`FIR_Stream_Mem` struct for the filter
+  to be applied.
+
+* :code:`input` : A pointer to an array of input samples.
+
+* :code:`output` : A pointer to an array of output samples. This must be
+  pre-allocated with a size greater than or equal to the size of the input array.
+
+* :code:`size` : The number of samples to process. Note this must be less than
+  or equal to the size of the input array.

@@ -20,6 +20,7 @@ Quick Links
    ./embedded_notes
    ./language_notes/language_notes
    ./Software/Software
+   ./dsp/dsp
 
 Indices and tables
 ------------------
