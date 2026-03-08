@@ -21,21 +21,21 @@ table {
     width: 80ch;
     border-collapse: collapse;
     margin: auto;
-    border-left: 1px solid #000;
-    border-right: 1px solid #000;
+    border-left: 1px solid #fff;
+    border-right: 1px solid #fff;
 }
 
 table th {
-    border-left: 1px solid #000;
-    border-right: 1px solid #000;
+    border-left: 1px solid #fff;
+    border-right: 1px solid #fff;
 }
 
 table td {
-    border-left: 1px solid #000;
-    border-right: 1px solid #000;
+    border-left: 1px solid #fff;
+    border-right: 1px solid #fff;
 }
 
 table tr {
-    border-top: 1px solid #000;
-    border-bottom: 1px solid #000;
+    border-top: 1px solid #fff;
+    border-bottom: 1px solid #fff;
 }
