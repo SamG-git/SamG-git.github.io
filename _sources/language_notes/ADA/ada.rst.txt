@@ -1,7 +1,0 @@
-ADA Language Notes
-================
-
-.. toctree:: 
-    :maxdepth: 2
-
-    concurrency_ada

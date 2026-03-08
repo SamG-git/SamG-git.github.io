@@ -1,8 +1,0 @@
-C++ Multithreading Notes
-========================
-
-.. toctree:: 
-    :maxdepth: 2
-
-    mutex_benchmarking
-    thread_safety_clang

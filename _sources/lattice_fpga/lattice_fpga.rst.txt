@@ -1,8 +1,0 @@
-Lattice FPGA Notes
-------------------
-
-.. toctree::
-    :maxdepth: 2
-
-    ubuntu2204_setup
-    brevia2_simple_led_counter

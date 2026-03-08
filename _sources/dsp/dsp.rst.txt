@@ -1,7 +1,0 @@
-DSP Notes
-=========
-
-.. toctree:: 
-    
-    fir_filter_in_c_1
-    fir_filter_in_c_2

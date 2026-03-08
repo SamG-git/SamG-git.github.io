@@ -1,0 +1,377 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<!-- Highlight.js CSS -->
+<link rel="stylesheet" href="/style.css"/>
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/dark.min.css">
+<!-- Highlight.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+<title>BasicFIRFilterC</title>
+</head>
+<body>
+<nav>
+<a href="/index.html">Home</a>
+</nav>
+<hr>
+<main class="content">
+<h1 id="writing-a-basic-fir-filter-in-c">Writing a Basic FIR Filter in
+C</h1>
+<h2 id="introduction-and-theory">Introduction and Theory</h2>
+<p>A FIR (Finite Impulse Response) filter is mathematically identical to
+a convolution between the input array and a set of taps which represent
+the impulse response of the filter. This can be implemented using a
+series of dot products between the tap vector and a vector consisting of
+the current input sample and those which came immediately before it.</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+<msub> <mi>y</mi> <mi>n</mi> </msub> <mo>=</mo> <munderover>
+<mo data-mjx-texclass="OP">∑</mo> <mrow data-mjx-texclass="ORD">
+<mi>N</mi> <mo>=</mo> <mn>0</mn> </mrow> <mrow data-mjx-texclass="ORD">
+<mi>N</mi> <mo>−</mo> <mn>1</mn> </mrow> </munderover> <msub> <mi>x</mi>
+<mrow data-mjx-texclass="ORD"> <mi>n</mi> <mo>−</mo> <mi>N</mi> </mrow>
+</msub> <mo>∗</mo> <msub> <mi>b</mi> <mi>N</mi> </msub> </math></p>
+<p>where <math>y</math> is the output array, <math>x</math> is the input
+array, <math>b</math> is the array of taps and <math>N</math> is the
+number of taps.</p>
+<p>When implementing this in code we need to decide how to treat the
+first <math>N</math> samples as we have no indication of what data
+should come before them. We can take one of two methods, either we can
+assume all previous samples are 0 or we can start our calculation at the
+<math><msup><mi>N</mi><mi>th</mi></msup></math> sample. For this example
+we will choose the zero assumption method as this gives us the same
+number of output samples as input.</p>
+<h2 id="basic-fir-filter">Basic FIR Filter</h2>
+<p>We will first create an unoptimised FIR filter which cab be called
+multiple times as data comes in, with memory of the previous samples.
+This will require 4 functions, one to initialize the required memory,
+one to apply the FIR filter, one to reset the memory in the case of a
+discontinuity in the received data, and one to free all the filter
+memory. To pass pass around this memory we will first declare the
+following structure:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">typedef</span> <span class="kw">struct</span> FIR_Stream_Mem <span class="op">{</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">size_t</span> tap_len<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">double</span> <span class="op">*</span>taps<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">double</span> <span class="op">*</span>buffer<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span> FIR_Stream_Mem<span class="op">;</span></span></code></pre></div>
+<p>The <code>tap_len</code> field contains the number of taps stored in
+the <code>taps</code> array. <code>buffer</code> will contain the
+previous samples and will also have size <code>tap_len</code>. We will
+allocate and populate this structure using the following function:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>FIR_Stream_Mem <span class="op">*</span>init_fir_stream<span class="op">(</span><span class="dt">double</span><span class="op">*</span> taps<span class="op">,</span> <span class="dt">size_t</span> tap_len<span class="op">){</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">/* Create the output object in memory */</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    FIR_Stream_Mem <span class="op">*</span>output <span class="op">=</span> <span class="op">(</span>FIR_Stream_Mem<span class="op">*)(</span>malloc<span class="op">(</span><span class="kw">sizeof</span><span class="op">(</span>FIR_Stream_Mem<span class="op">)));</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">/* Copy the taps across */</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    output<span class="op">-&gt;</span>tap_len <span class="op">=</span> tap_len<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    output<span class="op">-&gt;</span>taps <span class="op">=</span> <span class="op">(</span><span class="dt">double</span><span class="op">*)(</span>malloc<span class="op">(</span><span class="kw">sizeof</span><span class="op">(</span><span class="dt">double</span><span class="op">)</span> <span class="op">*</span> tap_len<span class="op">));</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    memcpy<span class="op">(</span>output<span class="op">-&gt;</span>taps<span class="op">,</span> taps<span class="op">,</span> tap_len <span class="op">*</span> <span class="kw">sizeof</span><span class="op">(</span><span class="dt">double</span><span class="op">));</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="co">/* Set the buffer to all zeros */</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    output<span class="op">-&gt;</span>buffer <span class="op">=</span> <span class="op">(</span><span class="dt">double</span><span class="op">*)(</span>malloc<span class="op">(</span><span class="kw">sizeof</span><span class="op">(</span><span class="dt">double</span><span class="op">)</span> <span class="op">*</span> tap_len<span class="op">));</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    memset<span class="op">(</span>output<span class="op">-&gt;</span>buffer<span class="op">,</span> <span class="bn">0x00</span><span class="op">,</span> tap_len <span class="op">*</span> <span class="kw">sizeof</span><span class="op">(</span><span class="dt">double</span><span class="op">));</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> output<span class="op">;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>This first allocates the memory to store the
+<code>FIR_Stream_Mem</code> structure itself, before allocating memory
+for the buffer and taps. The taps are copied over from the input to
+allow for the structure to be passed around more easily, and the buffer
+is set to all zeros as discussed above.</p>
+<p>We are now ready to start using the FIR filter. To do this, we need
+to implement the algorithm so it can be run on our data. We will use the
+following function:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> apply_fir<span class="op">(</span>FIR_Stream_Mem <span class="op">*</span>mem<span class="op">,</span> </span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>               <span class="dt">const</span> <span class="dt">double</span> <span class="op">*</span>input<span class="op">,</span> </span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>               <span class="dt">double</span> <span class="op">*</span>output<span class="op">,</span> </span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>               <span class="dt">size_t</span> size<span class="op">){</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">/* Loop through all input samples */</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span><span class="op">(</span><span class="dt">size_t</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> size<span class="op">;</span> i<span class="op">++){</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        <span class="co">/* Calculate first output sample */</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        <span class="dt">double</span> sample_output <span class="op">=</span> input<span class="op">[</span>i<span class="op">]</span> <span class="op">*</span> mem<span class="op">-&gt;</span>taps<span class="op">[</span><span class="dv">0</span><span class="op">];</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        <span class="co">/* Loop through all the taps */</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span><span class="op">(</span><span class="dt">size_t</span> j <span class="op">=</span> <span class="dv">1</span><span class="op">;</span> j <span class="op">&lt;</span> mem<span class="op">-&gt;</span>tap_len<span class="op">;</span> j<span class="op">++){</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>            sample_output <span class="op">+=</span> mem<span class="op">-&gt;</span>buffer<span class="op">[</span>j<span class="op">]</span> <span class="op">*</span> mem<span class="op">-&gt;</span>taps<span class="op">[</span>j<span class="op">];</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>        <span class="co">/* Update buffer */</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span><span class="op">(</span><span class="dt">size_t</span> j <span class="op">=</span> mem<span class="op">-&gt;</span>tap_len <span class="op">-</span> <span class="dv">2</span><span class="op">;</span> j <span class="op">&gt;</span> <span class="dv">0</span><span class="op">;</span> j<span class="op">--){</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>            mem<span class="op">-&gt;</span>buffer<span class="op">[</span>j <span class="op">+</span> <span class="dv">1</span><span class="op">]</span> <span class="op">=</span> mem<span class="op">-&gt;</span>buffer<span class="op">[</span>j<span class="op">];</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>        mem<span class="op">-&gt;</span>buffer<span class="op">[</span><span class="dv">1</span><span class="op">]</span> <span class="op">=</span> input<span class="op">[</span>i<span class="op">];</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>        output<span class="op">[</span>i<span class="op">]</span> <span class="op">=</span> sample_output<span class="op">;</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>This has the following arguments:</p>
+<ul>
+<li><code>mem</code> : A pointer to the <code>FIR_Stream_Mem</code>
+struct for the filter to be applied.</li>
+<li><code>input</code> : A pointer to an array of input samples.</li>
+<li><code>output</code> : A pointer to an array of output samples. This
+must be pre-allocated with a size greater than or equal to the size of
+the input array.</li>
+<li><code>size</code> : The number of samples to process. Note this must
+be less than or equal to the size of the input array</li>
+</ul>
+<p>It loops through all the input samples and calculates the dot product
+as discussed above. It then shifts all the samples in the buffer to the
+right and adds the current sample to the front before calculating the
+next sample.</p>
+<p>This function can now be applied on chunks of our input data as they
+come in, with the memory from the last chunk being kept in the
+<code>FIR_Stream_Mem</code> struct.</p>
+<p>However, if a discontinuity is detected in the input stream of
+samples the history stored in <code>buffer</code> will be incorrect and
+we will have no way of determining what it should be. In this case it is
+best to reset the filter by setting the filter’s buffer to all zeros,
+which can be done with the following function:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> reset_fir<span class="op">(</span>FIR_Stream_Mem <span class="op">*</span>mem<span class="op">){</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    memset<span class="op">(</span>mem<span class="op">-&gt;</span>buffer<span class="op">,</span> <span class="bn">0x00</span><span class="op">,</span> mem<span class="op">-&gt;</span>tap_len <span class="op">*</span> <span class="kw">sizeof</span><span class="op">(</span><span class="dt">double</span><span class="op">));</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Finally, when we are done with the filter we should free all
+associated memory. This can be done with the following function:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> deinit_fir<span class="op">(</span>FIR_Stream_Mem <span class="op">*</span>mem<span class="op">){</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    free<span class="op">(</span>mem<span class="op">-&gt;</span>buffer<span class="op">);</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    free<span class="op">(</span>mem<span class="op">-&gt;</span>taps<span class="op">);</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    free<span class="op">(</span>mem<span class="op">);</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="speed-optimizations">Speed Optimizations</h2>
+<p>The biggest flaw with the previous implementation is the shifting of
+the <code>buffer</code> array in the <code>FIR_Stream_Mem</code> struct
+after every sample is processed. This is done by re-writing every
+element of the buffer, as shown in the following table:</p>
+<table>
+<caption>
+Changes to FIR buffer
+</caption>
+<tr>
+<th>
+Sample
+</th>
+<th>
+Buffer Content
+</th>
+</tr>
+<tr>
+<td>
+N
+</td>
+<td>
+7 6 5 4 3 2 1 0
+</td>
+</tr>
+<tr>
+<td>
+N + 1
+</td>
+<td>
+8 7 6 5 4 3 2 1
+</td>
+</tr>
+<tr>
+<td>
+N + 2
+</td>
+<td>
+9 8 7 6 5 4 3 2
+</td>
+</tr>
+</table>
+<p>This means that we are doing <code>FIR_Stream_Mem-&gt;tap_len</code>
+writes to memory in order to update the buffer. However, only one of the
+values in <code>buffer</code> has actually changed, the others have just
+shifted position. By changing the start position of the buffer, we can
+reduce the number of writes to only one per sample. The table below
+shows this in action, where the bolded positions are the start of the
+array.</p>
+<table>
+<caption>
+Optimized FIR buffer memory layout
+</caption>
+<tr>
+<th>
+Sample
+</th>
+<th>
+Buffer Content
+</th>
+</tr>
+<tr>
+<td>
+N
+</td>
+<td>
+<b>7</b> 6 5 4 3 2 1 0
+</td>
+</tr>
+<tr>
+<td>
+N + 1
+</td>
+<td>
+7 6 5 4 3 2 1 <b>8</b>
+</td>
+</tr>
+<tr>
+<td>
+N + 2
+</td>
+<td>
+7 6 5 4 3 2 <b>9</b> 8
+</td>
+</tr>
+</table>
+<p>To implement this method we first need to modify the
+<code>FIR_Stream_Mem</code> struct to record the starting position of
+<code>buffer</code> :</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">typedef</span> <span class="kw">struct</span> FIR_Stream_Mem <span class="op">{</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">size_t</span> tap_len<span class="op">;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">double</span> <span class="op">*</span>taps<span class="op">;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">double</span> <span class="op">*</span>buffer<span class="op">;</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">size_t</span> buffer_start<span class="op">;</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span> FIR_Stream_Mem<span class="op">;</span></span></code></pre></div>
+<p>The <code>buffer_start</code> value should also be initialized to 0
+in <code>init_fir_stream</code>:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>FIR_Stream_Mem <span class="op">*</span>init_fir_stream<span class="op">(</span><span class="dt">double</span><span class="op">*</span> taps<span class="op">,</span> <span class="dt">size_t</span> tap_len<span class="op">){</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">/* Create the output object in memory */</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    FIR_Stream_Mem <span class="op">*</span>output <span class="op">=</span> <span class="op">(</span>FIR_Stream_Mem<span class="op">*)(</span>malloc<span class="op">(</span><span class="kw">sizeof</span><span class="op">(</span>FIR_Stream_Mem<span class="op">)));</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">/* Copy the taps across */</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    output<span class="op">-&gt;</span>tap_len <span class="op">=</span> tap_len<span class="op">;</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    output<span class="op">-&gt;</span>taps <span class="op">=</span> <span class="op">(</span><span class="dt">double</span><span class="op">*)(</span>malloc<span class="op">(</span><span class="kw">sizeof</span><span class="op">(</span><span class="dt">double</span><span class="op">)</span> <span class="op">*</span> tap_len<span class="op">));</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>    memcpy<span class="op">(</span>output<span class="op">-&gt;</span>taps<span class="op">,</span> taps<span class="op">,</span> tap_len <span class="op">*</span> <span class="kw">sizeof</span><span class="op">(</span><span class="dt">double</span><span class="op">));</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>    <span class="co">/* Set the buffer to all zeros */</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>    output<span class="op">-&gt;</span>buffer <span class="op">=</span> <span class="op">(</span><span class="dt">double</span><span class="op">*)(</span>malloc<span class="op">(</span><span class="kw">sizeof</span><span class="op">(</span><span class="dt">double</span><span class="op">)</span> <span class="op">*</span> tap_len<span class="op">));</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>    memset<span class="op">(</span>output<span class="op">-&gt;</span>buffer<span class="op">,</span> <span class="bn">0x00</span><span class="op">,</span> tap_len <span class="op">*</span> <span class="kw">sizeof</span><span class="op">(</span><span class="dt">double</span><span class="op">));</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">/* Set the buffer start position to 0 */</span></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>    output<span class="op">-&gt;</span>buffer_start <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> output<span class="op">;</span></span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Finally, we need to modify <code>apply_fft</code> to loop index and
+update <code>buffer</code> correctly. We loop though <code>buffer</code>
+when applying the filter taps, so we make out first mod here. Rather
+than using the for-loop index, we calculate our own index using the
+following algorithm:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="dt">size_t</span> idx<span class="op">;</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span><span class="op">(</span>mem<span class="op">-&gt;</span>buffer_start <span class="op">+</span> j <span class="op">&lt;</span> mem<span class="op">-&gt;</span>tap_len<span class="op">){</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    idx <span class="op">=</span> mem<span class="op">-&gt;</span>buffer_start <span class="op">+</span> j<span class="op">;</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    idx <span class="op">=</span> mem<span class="op">-&gt;</span>buffer_start <span class="op">+</span> j <span class="op">-</span> mem<span class="op">-&gt;</span>tap_len<span class="op">;</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>This ensures we don’t get an out-of-bounds error by looping the index
+back to the start if it will otherwise overrun.</p>
+<p>We also need to ensure that <code>buffer</code> gets updated
+correctly. This is done by setting the value at
+<code>buffer_start</code> to be our current input sample, then
+subtracting one from <code>buffer_start</code>. We again avoid an
+overrun by checking if buffer_start is 0, in which case we set
+<code>buffer_start</code> to be the last element in the array. This is
+done using the following code:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>mem<span class="op">-&gt;</span>buffer<span class="op">[</span>mem<span class="op">-&gt;</span>buffer_start<span class="op">]</span> <span class="op">=</span> input<span class="op">[</span>i<span class="op">];</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span><span class="op">(</span>mem<span class="op">-&gt;</span>buffer_start <span class="op">==</span> <span class="dv">0</span><span class="op">){</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    mem<span class="op">-&gt;</span>buffer_start <span class="op">=</span> mem<span class="op">-&gt;</span>tap_len <span class="op">-</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    mem<span class="op">-&gt;</span>buffer_start<span class="op">--;</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>This gives a final <code>apply_fft</code> function of:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> apply_fir<span class="op">(</span>FIR_Stream_Mem <span class="op">*</span>mem<span class="op">,</span> <span class="dt">const</span> <span class="dt">double</span> <span class="op">*</span>input<span class="op">,</span> <span class="dt">double</span> <span class="op">*</span>output<span class="op">,</span> <span class="dt">size_t</span> size<span class="op">){</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">/* Loop through all input samples */</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span><span class="op">(</span><span class="dt">size_t</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> size<span class="op">;</span> i<span class="op">++){</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>        <span class="co">/* Calculate first output sample */</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>        <span class="dt">double</span> sample_output <span class="op">=</span> input<span class="op">[</span>i<span class="op">]</span> <span class="op">*</span> mem<span class="op">-&gt;</span>taps<span class="op">[</span><span class="dv">0</span><span class="op">];</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>        <span class="co">/* Loop through all the taps */</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span><span class="op">(</span><span class="dt">size_t</span> j <span class="op">=</span> <span class="dv">1</span><span class="op">;</span> j <span class="op">&lt;</span> mem<span class="op">-&gt;</span>tap_len<span class="op">;</span> j<span class="op">++){</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>            <span class="dt">size_t</span> idx<span class="op">;</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span><span class="op">(</span>mem<span class="op">-&gt;</span>buffer_start <span class="op">+</span> j <span class="op">&lt;</span> mem<span class="op">-&gt;</span>tap_len<span class="op">){</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>                idx <span class="op">=</span> mem<span class="op">-&gt;</span>buffer_start <span class="op">+</span> j<span class="op">;</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>                idx <span class="op">=</span> mem<span class="op">-&gt;</span>buffer_start <span class="op">+</span> j <span class="op">-</span> mem<span class="op">-&gt;</span>tap_len<span class="op">;</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>            sample_output <span class="op">+=</span> mem<span class="op">-&gt;</span>buffer<span class="op">[</span>idx<span class="op">]</span> <span class="op">*</span> mem<span class="op">-&gt;</span>taps<span class="op">[</span>j<span class="op">];</span></span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>        <span class="co">/* Update buffer */</span></span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>        mem<span class="op">-&gt;</span>buffer<span class="op">[</span>mem<span class="op">-&gt;</span>buffer_start<span class="op">]</span> <span class="op">=</span> input<span class="op">[</span>i<span class="op">];</span></span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span><span class="op">(</span>mem<span class="op">-&gt;</span>buffer_start <span class="op">==</span> <span class="dv">0</span><span class="op">){</span></span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>            mem<span class="op">-&gt;</span>buffer_start <span class="op">=</span> mem<span class="op">-&gt;</span>tap_len <span class="op">-</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a>            mem<span class="op">-&gt;</span>buffer_start<span class="op">--;</span></span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a>        output<span class="op">[</span>i<span class="op">]</span> <span class="op">=</span> sample_output<span class="op">;</span></span>
+<span id="cb10-29"><a href="#cb10-29" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb10-30"><a href="#cb10-30" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="speed-boost">Speed Boost</h3>
+<p>Modern compilers are pretty good at optimizing the code given to
+them, so does this modification actually give a noticeable speed
+increase? To test this we can use the following function which calls
+<code>apply_fft</code> 1,000,000 times and compare the execution times
+between the two implementations:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;stdio.h&gt;</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;stdlib.h&gt;</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;time.h&gt;</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;assert.h&gt;</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&quot;fir_filter.h&quot;</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="dt">static</span> <span class="dt">double</span> randfrom<span class="op">(</span><span class="dt">double</span> min<span class="op">,</span> <span class="dt">double</span> max<span class="op">){</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>    <span class="dt">double</span> range <span class="op">=</span> max <span class="op">-</span> min<span class="op">;</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>    <span class="dt">double</span> div <span class="op">=</span> RAND_MAX <span class="op">/</span> range<span class="op">;</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> min <span class="op">+</span> <span class="op">(</span>rand<span class="op">()</span> <span class="op">/</span> div<span class="op">);</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">(){</span></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>    <span class="co">/* Seed random number generator */</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>    srand<span class="op">(</span>time<span class="op">(</span>NULL<span class="op">));</span></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>    <span class="co">/* Create some random input data */</span></span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>    <span class="dt">double</span> data<span class="op">[</span><span class="dv">1024</span><span class="op">];</span></span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span><span class="op">(</span><span class="dt">size_t</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> <span class="dv">1024</span><span class="op">;</span> i<span class="op">++){</span></span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a>        data<span class="op">[</span>i<span class="op">]</span> <span class="op">=</span> randfrom<span class="op">(-</span><span class="fl">1.0</span><span class="op">,</span> <span class="fl">1.0</span><span class="op">);</span></span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a>    <span class="co">/* Create random taps */</span></span>
+<span id="cb11-26"><a href="#cb11-26" aria-hidden="true" tabindex="-1"></a>    <span class="dt">double</span> taps<span class="op">[</span><span class="dv">8</span><span class="op">]</span> <span class="op">=</span> <span class="op">{</span><span class="dv">1</span><span class="op">,</span> <span class="dv">2</span><span class="op">,</span> <span class="dv">3</span><span class="op">,</span> <span class="dv">4</span><span class="op">,</span> <span class="dv">4</span><span class="op">,</span> <span class="dv">3</span><span class="op">,</span> <span class="dv">2</span><span class="op">,</span> <span class="dv">1</span><span class="op">};</span></span>
+<span id="cb11-27"><a href="#cb11-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-28"><a href="#cb11-28" aria-hidden="true" tabindex="-1"></a>    <span class="co">/* Init fir filter */</span></span>
+<span id="cb11-29"><a href="#cb11-29" aria-hidden="true" tabindex="-1"></a>    FIR_Stream_Mem <span class="op">*</span>fir_filter <span class="op">=</span> init_fir_stream<span class="op">(</span>taps<span class="op">,</span> <span class="dv">8</span><span class="op">);</span></span>
+<span id="cb11-30"><a href="#cb11-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-31"><a href="#cb11-31" aria-hidden="true" tabindex="-1"></a>    <span class="co">/* Filter data */</span></span>
+<span id="cb11-32"><a href="#cb11-32" aria-hidden="true" tabindex="-1"></a>    <span class="dt">double</span> output<span class="op">[</span><span class="dv">1024</span><span class="op">];</span></span>
+<span id="cb11-33"><a href="#cb11-33" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span><span class="op">(</span><span class="dt">size_t</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> <span class="dv">1000000</span><span class="op">;</span> i<span class="op">++){</span></span>
+<span id="cb11-34"><a href="#cb11-34" aria-hidden="true" tabindex="-1"></a>        apply_fir<span class="op">(</span>fir_filter<span class="op">,</span> data<span class="op">,</span> output<span class="op">,</span> <span class="dv">1024</span><span class="op">);</span></span>
+<span id="cb11-35"><a href="#cb11-35" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb11-36"><a href="#cb11-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-37"><a href="#cb11-37" aria-hidden="true" tabindex="-1"></a>    <span class="co">/* Deallocate the FIR memory */</span></span>
+<span id="cb11-38"><a href="#cb11-38" aria-hidden="true" tabindex="-1"></a>    deinit_fir<span class="op">(</span>fir_filter<span class="op">);</span></span>
+<span id="cb11-39"><a href="#cb11-39" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Running the code with the unoptimized <code>apply_fft</code> took
+25.936 seconds, whereas the optimized version took only 22.511
+seconds.</p>
+<h2 id="memory-optimization">Memory Optimization</h2>
+<p>As modern computers have a lot of memory I have not experimented with
+the possible memory optimizations which could be made to this code.
+However, there are two changes which could be made. The first is that
+the <code>init_fir_stream</code> function could store the pointer its
+given to taps rather than making a copy. This would reduce the memory
+footprint of the FIR filter at the expense of thread safety in
+multithreaded programs. Secondly, the <code>buffer</code> element in
+<code>FIR_Stream_Mem</code> is currently one byte longer than it needs
+to be - the final element is never used as part of the filter. This
+could be fixed, but it would make the indexing in <code>apply_fft</code>
+a bit more complicated.</p>
+</main>
+<hr>
+<footer>© 2026</footer>
+</body>
+</html>
