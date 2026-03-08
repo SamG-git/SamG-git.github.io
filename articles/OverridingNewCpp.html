@@ -19,6 +19,102 @@ href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/dark.min
 <main class="content">
 <h1 id="detecting-memory-leaks-by-overriding-new-in-c">Detecting Memory
 Leaks by Overriding New in C++</h1>
+<p><strong>THIS ARTICLE IS A WORK IN PROGRESS</strong></p>
+<h2 id="introduction">Introduction</h2>
+<p>Most modern C++ compilers, such as g++, have the ability to compile
+in tooling to detect memory leaks. In the case of g++ and gcc, the
+<code>-fsanitize=address</code> option will compile in tooling that
+hooks to memory allocations and print useful debugging information when
+there is a memory leak, use-after-free, null pointer de-reference and
+other memory issues. However, some compilers, such as those used for
+older or proprietary systems, do not have this functionality, making
+detecting and fixing memory leaks using dynamic analysis harder.</p>
+<p>This article will explain how basic C++ features can be used to add
+similar, if more basic, functionality. The examples used will all
+compile using C++ 98 with the minimum number of required headers.</p>
+<h2 id="overriding-new-and-delete">Overriding New and Delete</h2>
+<p>The <code>new</code> operator is used by C++ to allocate memory on
+the heap in a similar way to <code>malloc</code> in C. The delete
+operator is used to deallocate said memory, in a similar manner to
+<code>free</code> in C. Both of these operators can be overwritten to
+add additional tooling:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode c++"><code class="sourceCode cpp"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;iostream&gt;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;cstdlib&gt;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span><span class="op">*</span> <span class="kw">operator</span> <span class="kw">new</span><span class="op">(</span><span class="dt">size_t</span> size<span class="op">,</span> <span class="at">const</span> <span class="dt">char</span><span class="op">*</span> file<span class="op">,</span> <span class="dt">int</span> line<span class="op">)</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">void</span> <span class="op">*</span> ptr <span class="op">=</span> malloc<span class="op">(</span>size<span class="op">);</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="bu">std::</span>cout <span class="op">&lt;&lt;</span> <span class="st">&quot;New called in &quot;</span> <span class="op">&lt;&lt;</span> file <span class="op">&lt;&lt;</span> <span class="st">&quot; on line &quot;</span> <span class="op">&lt;&lt;</span> line <span class="op">&lt;&lt;</span> <span class="bu">std::</span>endl<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> ptr<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> <span class="kw">operator</span> <span class="kw">delete</span><span class="op">(</span><span class="dt">void</span><span class="op">*</span> ptr<span class="op">)</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="bu">std::</span>cout <span class="op">&lt;&lt;</span> <span class="st">&quot;Delete called&quot;</span> <span class="op">&lt;&lt;</span> <span class="bu">std::</span>endl<span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    free<span class="op">(</span>ptr<span class="op">);</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="pp">#define new </span><span class="kw">new</span><span class="op">(</span><span class="ot">__FILE__</span><span class="op">,</span><span class="pp"> </span><span class="ot">__LINE__</span><span class="op">)</span></span></code></pre></div>
+<p>In the case above, the tooling is simply printing when
+<code>new</code> and <code>delete</code> get called. In C++ 11 the
+<code>noexcept</code> keyword should be added after
+<code>delete(void* ptr)</code>.</p>
+<h2 id="adding-useful-tooling">Adding Useful Tooling</h2>
+<p>Just printing when <code>new</code> and <code>delete</code> get
+called isn’t all that useful. Instead, we want to keep an updated list
+of all allocated memory and where in our code it has been allocated.
+Then, at the end of our program, we can print out all the locations
+where we have leaked memory.</p>
+<p>In modern versions of C++ a global <code>std::map</code> should be
+used to store all the required information. However, in order to be
+maximally compatible with older compiler versions and C++ standards, a
+global linked list will be used. The structure used to store the
+information in the list will have:</p>
+<ul>
+<li>The memory address allocated, which will be used as our unique
+key.</li>
+<li>The name of the file where the memory is allocated.</li>
+<li>The line-number where the memory is allocated.</li>
+<li>The next structure in the linked list.</li>
+</ul>
+<p>We will implement the linked list in its own library. The header file
+for the library will define the linked list structure, provide the
+overwritten <code>new</code> and <code>delete</code> operators, and
+provide an API for interacting with the linked list. The source file
+will contain the global linked list, stored as a static member variable,
+and the implementations of the linked list API.</p>
+<h3 id="the-header-file">The Header File</h3>
+<p>The linked list structure looks like this:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode c++"><code class="sourceCode cpp"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> MemoryAllocation <span class="op">{</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">void</span><span class="op">*</span> ptr<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">const</span> <span class="dt">char</span><span class="op">*</span> filename<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> line<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">struct</span> MemoryAllocation<span class="op">*</span> next<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>The API for interacting with the linked list is given by:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode c++"><code class="sourceCode cpp"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> AddToLL<span class="op">(</span><span class="dt">void</span><span class="op">*</span> ptr<span class="op">,</span> <span class="at">const</span> <span class="dt">char</span><span class="op">*</span> filename<span class="op">,</span> <span class="dt">int</span> line<span class="op">);</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> DelFromLL<span class="op">(</span><span class="dt">void</span><span class="op">*</span> ptr<span class="op">);</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> PrintLL<span class="op">();</span></span></code></pre></div>
+<p>Finally, the header file contains the overwritten <code>new</code>
+and <code>delete</code> operators:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode c++"><code class="sourceCode cpp"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span><span class="op">*</span> <span class="kw">operator</span> <span class="kw">new</span><span class="op">(</span><span class="dt">size_t</span> size<span class="op">,</span> <span class="at">const</span> <span class="dt">char</span><span class="op">*</span> file<span class="op">,</span> <span class="dt">int</span> line<span class="op">)</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">void</span> <span class="op">*</span> ptr <span class="op">=</span> malloc<span class="op">(</span>size<span class="op">);</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    AddToLL<span class="op">(</span>ptr<span class="op">,</span> file<span class="op">,</span> line<span class="op">);</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> ptr<span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> <span class="kw">operator</span> <span class="kw">delete</span><span class="op">(</span><span class="dt">void</span><span class="op">*</span> ptr<span class="op">)</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    DelFromLL<span class="op">(</span>ptr<span class="op">);</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    free<span class="op">(</span>ptr<span class="op">);</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="pp">#define new </span><span class="kw">new</span><span class="op">(</span><span class="ot">__FILE__</span><span class="op">,</span><span class="pp"> </span><span class="ot">__LINE__</span><span class="op">)</span></span></code></pre></div>
 </main>
 <hr>
 <footer>© 2026</footer>
