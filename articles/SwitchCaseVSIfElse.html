@@ -1,0 +1,364 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<!-- Highlight.js CSS -->
+<link rel="stylesheet" href="/style.css"/>
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/dark.min.css">
+<!-- Highlight.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+<title>SwitchCaseVSIfElse</title>
+</head>
+<body>
+<nav>
+<a href="/index.html">Home</a>
+</nav>
+<hr>
+<main class="content">
+<h1 id="the-compiled-difference-between-switch-case-and-if-else">The
+compiled difference between switch-case and if-else</h1>
+<h2 id="introduction">Introduction</h2>
+<p>The C language provides two methods of chaining together conditional
+statements: an if-else tree; and a switch-case statement. In the
+surface, these may seem logically identical, and it is indeed possible
+to create logically equivalent code using both methods. However, the
+compiler treats the syntax differently, resulting in (marginally) faster
+code in some circumstances using switch-case statements.</p>
+<h2 id="a-very-basic-test-bench">A very basic test bench</h2>
+<p>To investigate this I created two functions,
+<code>switch_case_func</code>:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> switch_case_func<span class="op">(</span><span class="dt">int</span> in<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> out<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">switch</span> <span class="op">(</span>in<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> <span class="dv">0</span><span class="op">:</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>            out <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>            <span class="cf">break</span><span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> <span class="dv">1</span><span class="op">:</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>            out <span class="op">=</span> <span class="dv">5</span><span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>            <span class="cf">break</span><span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> <span class="dv">2</span><span class="op">:</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>            out <span class="op">=</span> <span class="op">-</span><span class="dv">4</span><span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>            <span class="cf">break</span><span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> <span class="dv">3</span><span class="op">:</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>            out <span class="op">=</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>            <span class="cf">break</span><span class="op">;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> <span class="dv">4</span><span class="op">:</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>            out <span class="op">=</span> <span class="op">-</span><span class="dv">93</span><span class="op">;</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>            <span class="cf">break</span><span class="op">;</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>        <span class="cf">default</span><span class="op">:</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>            out <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>            <span class="cf">break</span><span class="op">;</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> out<span class="op">;</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>and <code>if_else_func</code>:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> if_else_func<span class="op">(</span><span class="dt">int</span> in<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> out<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>in <span class="op">==</span> <span class="dv">0</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>        out <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span> <span class="cf">else</span> <span class="cf">if</span> <span class="op">(</span>in <span class="op">==</span> <span class="dv">1</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        out <span class="op">=</span> <span class="dv">5</span><span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span> <span class="cf">else</span> <span class="cf">if</span> <span class="op">(</span>in <span class="op">==</span> <span class="dv">2</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        out <span class="op">=</span> <span class="op">-</span><span class="dv">4</span><span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span> <span class="cf">else</span> <span class="cf">if</span> <span class="op">(</span>in <span class="op">==</span> <span class="dv">3</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        out <span class="op">=</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span> <span class="cf">else</span> <span class="cf">if</span> <span class="op">(</span>in <span class="op">==</span> <span class="dv">4</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>        out <span class="op">=</span> <span class="op">-</span><span class="dv">93</span><span class="op">;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>        out <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> out<span class="op">;</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>These functions were then used to show how the different syntax
+affects the compiled binary in a variety of different ways.</p>
+<h3 id="the-machine-code">The machine code</h3>
+<p>Looking at the decompilation of these functions in Ghidra it is clear
+that the compiler has done something different for each function. The
+<code>if_else_func</code> function has decompiled as expected:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>undefined4 if_else_func<span class="op">(</span><span class="dt">int</span> param_1<span class="op">)</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  undefined4 local_c<span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="op">(</span>param_1 <span class="op">==</span> <span class="dv">0</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    local_c <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">else</span> <span class="cf">if</span> <span class="op">(</span>param_1 <span class="op">==</span> <span class="dv">1</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    local_c <span class="op">=</span> <span class="dv">5</span><span class="op">;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  <span class="cf">else</span> <span class="cf">if</span> <span class="op">(</span>param_1 <span class="op">==</span> <span class="dv">2</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    local_c <span class="op">=</span> <span class="bn">0xfffffffc</span><span class="op">;</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  <span class="cf">else</span> <span class="cf">if</span> <span class="op">(</span>param_1 <span class="op">==</span> <span class="dv">3</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    local_c <span class="op">=</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>  <span class="cf">else</span> <span class="cf">if</span> <span class="op">(</span>param_1 <span class="op">==</span> <span class="dv">4</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>    local_c <span class="op">=</span> <span class="bn">0xffffffa3</span><span class="op">;</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>  <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>    local_c <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> local_c<span class="op">;</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>This is pretty much identical to the source input with the variable
+names stripped out. However, <code>switch_case_func</code> looks like
+this:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>undefined4 switch_case_func<span class="op">(</span><span class="dt">int</span> param_1<span class="op">)</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="op">(</span>param_1 <span class="op">==</span> <span class="dv">4</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="bn">0xffffffa3</span><span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="op">(</span>param_1 <span class="op">&lt;</span> <span class="dv">5</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>param_1 <span class="op">==</span> <span class="dv">3</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>      <span class="cf">return</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>param_1 <span class="op">&lt;</span> <span class="dv">4</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span> <span class="op">(</span>param_1 <span class="op">==</span> <span class="dv">2</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="bn">0xfffffffc</span><span class="op">;</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>      <span class="op">}</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span> <span class="op">(</span>param_1 <span class="op">&lt;</span> <span class="dv">3</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>param_1 <span class="op">==</span> <span class="dv">0</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>          <span class="cf">return</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>param_1 <span class="op">==</span> <span class="dv">1</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>          <span class="cf">return</span> <span class="dv">5</span><span class="op">;</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>      <span class="op">}</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Instead of waiting to the end of the function to return, the return
+statements are done within the if-else tree, meaning the program doesn’t
+need to jump to the end of the function. The code also makes use of
+comparison operators other than equals. Lets take a look at these
+functions in their assembly form:</p>
+<p><code>switch_case_func</code>:</p>
+<pre><code>        .globl  switch_case_func
+        .type   switch_case_func, @function
+switch_case_func:
+.LFB7:
+        .cfi_startproc
+        pushq   %rbp
+        .cfi_def_cfa_offset 16
+        .cfi_offset 6, -16
+        movq    %rsp, %rbp
+        .cfi_def_cfa_register 6
+        movl    %edi, -20(%rbp)
+        cmpl    $4, -20(%rbp)
+        je      .L3
+        cmpl    $4, -20(%rbp)
+        jg      .L4
+        cmpl    $3, -20(%rbp)
+        je      .L5
+        cmpl    $3, -20(%rbp)
+        jg      .L4
+        cmpl    $2, -20(%rbp)
+        je      .L6
+        cmpl    $2, -20(%rbp)
+        jg      .L4
+        cmpl    $0, -20(%rbp)
+        je      .L7
+        cmpl    $1, -20(%rbp)
+        je      .L8
+        jmp     .L4
+.L7:
+        movl    $1, -4(%rbp)
+        jmp     .L9
+.L8:
+        movl    $5, -4(%rbp)
+        jmp     .L9
+.L6:
+        movl    $-4, -4(%rbp)
+        jmp     .L9
+.L5:
+        movl    $10, -4(%rbp)
+        jmp     .L9
+.L3:
+        movl    $-93, -4(%rbp)
+        jmp     .L9
+.L4:
+        movl    $0, -4(%rbp)
+        nop
+.L9:
+        movl    -4(%rbp), %eax
+        popq    %rbp
+        .cfi_def_cfa 7, 8
+        ret
+        .cfi_endproc
+.LFE7:
+        .size   switch_case_func, .-switch_case_func</code></pre>
+<p>`<code>if_else_func</code>:</p>
+<pre><code>        .globl  if_else_func
+        .type   if_else_func, @function
+if_else_func:
+.LFB8:
+        .cfi_startproc
+        pushq   %rbp
+        .cfi_def_cfa_offset 16
+        .cfi_offset 6, -16
+        movq    %rsp, %rbp
+        .cfi_def_cfa_register 6
+        movl    %edi, -20(%rbp)
+        cmpl    $0, -20(%rbp)
+        jne     .L12
+        movl    $1, -4(%rbp)
+        jmp     .L13
+.L12:
+        cmpl    $1, -20(%rbp)
+        jne     .L14
+        movl    $5, -4(%rbp)
+        jmp     .L13
+.L14:
+        cmpl    $2, -20(%rbp)
+        jne     .L15
+        movl    $-4, -4(%rbp)
+        jmp     .L13
+.L15:
+        cmpl    $3, -20(%rbp)
+        jne     .L16
+        movl    $10, -4(%rbp)
+        jmp     .L13
+.L16:
+        cmpl    $4, -20(%rbp)
+        jne     .L17
+        movl    $-93, -4(%rbp)
+        jmp     .L13
+.L17:
+        movl    $0, -4(%rbp)
+.L13:
+        movl    -4(%rbp), %eax
+        popq    %rbp
+        .cfi_def_cfa 7, 8
+        ret
+        .cfi_endproc
+.LFE8:
+        .size   if_else_func, .-if_else_func</code></pre>
+<p>The structure of these functions ion assembly is very different. The
+if-else method is structures much more like the code, with each part of
+the tree handled in its own section, and comparisons being done using
+the <code>jne</code>, or jump-if-not-equal, instruction. In comparison,
+the compiled switch-case statement has a structure quite different to
+the code which generated it. Instead of doing the comparison in-line, it
+is all done at the top of the method, with the logic for each case being
+handled by a label below the comparison section. We again see the use of
+comparison operators other than equal, with the use of the
+<code>jg</code>, or jump-if-greater-than, instruction.</p>
+<h3 id="number-of-instructions-per-comparison">Number of instructions
+per comparison</h3>
+<p>So, which is better? One way to determine this is by quantifying
+which method can do the comparison faster. The table below shows the
+number of instructions the function takes to execute for each input:</p>
+<table>
+<caption>
+Number of instructions for each input
+</caption>
+<tr>
+<th>
+Input
+</th>
+<th>
+If-Else
+</th>
+<th>
+Switch-Case
+</th>
+</tr>
+<tr>
+<td>
+0
+</td>
+<td>
+22
+</td>
+<td>
+10
+</td>
+</tr>
+<tr>
+<td>
+1
+</td>
+<td>
+24
+</td>
+<td>
+12
+</td>
+</tr>
+<tr>
+<td>
+2
+</td>
+<td>
+18
+</td>
+<td>
+14
+</td>
+</tr>
+<tr>
+<td>
+3
+</td>
+<td>
+14
+</td>
+<td>
+16
+</td>
+</tr>
+<tr>
+<td>
+4
+</td>
+<td>
+10
+</td>
+<td>
+18
+</td>
+</tr>
+<tr>
+<td>
+<blockquote>
+4
+</td>
+<td>
+12
+</td>
+<td>
+17
+</td>
+</tr>
+</table>
+</blockquote>
+<p>This detracts from the normal wisdom, which states that switch-case
+statements are faster than if-else trees.</p>
+<h3 id="adding-compiler-optimizations">Adding compiler
+optimizations</h3>
+<p>Adding compiler optimizations completely changes the output. Using
+<code>O1</code> or <code>O2</code> optimizations results in the code for
+the if-else and switch-case functions being almost identical. Both end
+up using look-up table logic which dramatically reduces the amount of
+comparisons required. The reason this optimization is made in the (very
+basic) case shown above can potentially be explained by the definition
+of a switch statement in K&amp;R, the seminal book on the C
+language:</p>
+<blockquote>
+<p>The switch statement is a multi-way decision that tests whether an
+expression matches one of a number of <em>constant</em> integer values,
+and branches accordingly.</p>
+</blockquote>
+</main>
+<hr>
+<footer>© 2026</footer>
+</body>
+</html>
