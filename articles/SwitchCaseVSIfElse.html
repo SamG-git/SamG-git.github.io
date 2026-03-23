@@ -21,7 +21,7 @@ href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/dark.min
 compiled difference between switch-case and if-else</h1>
 <h2 id="introduction">Introduction</h2>
 <p>The C language provides two methods of chaining together conditional
-statements: an if-else tree; and a switch-case statement. In the
+statements: an if-else tree; and a switch-case statement. On the
 surface, these may seem logically identical, and it is indeed possible
 to create logically equivalent code using both methods. However, the
 compiler treats the syntax differently, resulting in (marginally) faster
@@ -328,8 +328,7 @@ Switch-Case
 </tr>
 <tr>
 <td>
-<blockquote>
-4
+&gt;4
 </td>
 <td>
 12
@@ -339,7 +338,6 @@ Switch-Case
 </td>
 </tr>
 </table>
-</blockquote>
 <p>This detracts from the normal wisdom, which states that switch-case
 statements are faster than if-else trees.</p>
 <h3 id="adding-compiler-optimizations">Adding compiler
@@ -357,6 +355,10 @@ language:</p>
 expression matches one of a number of <em>constant</em> integer values,
 and branches accordingly.</p>
 </blockquote>
+<p>As the example used is <em>only</em> comparing to constant integer
+values, the compiler might well be optimizing it to the equivalent of a
+switch-case statement, hence the production of equivalent machine
+code.</p>
 </main>
 <hr>
 <footer>© 2026</footer>
